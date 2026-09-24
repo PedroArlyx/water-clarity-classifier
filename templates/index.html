@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Classificador de Copo de Agua</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main>
+        <h1>Copo de agua: limpo ou sujo?</h1>
+        <p class="subtitle">Envie uma foto de um copo de agua e o modelo classifica com base na cor (RGB).</p>
+
+        <form action="/predict" method="post" enctype="multipart/form-data">
+            <input type="file" name="imagem" accept="image/*" required>
+            <button type="submit">Classificar</button>
+        </form>
+
+        {% if error %}
+            <div class="card error">{{ error }}</div>
+        {% endif %}
+
+        {% if result %}
+            <div class="card result {{ 'clean' if result == 'limpo' else 'dirty' }}">
+                <h2>Resultado: {{ result|upper }}</h2>
+                <p>RGB medio detectado: R={{ rgb[0] }}, G={{ rgb[1] }}, B={{ rgb[2] }}</p>
+                <p>Modelo utilizado: {{ model_name }}</p>
+                {% if proba %}
+                    <p>Confianca: {{ proba }}%</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </main>
+</body>
+</html>
