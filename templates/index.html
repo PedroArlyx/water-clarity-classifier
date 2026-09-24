@@ -1,34 +1,82 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Classificador de Copo de Agua</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <main>
-        <h1>Copo de agua: limpo ou sujo?</h1>
-        <p class="subtitle">Envie uma foto de um copo de agua e o modelo classifica com base na cor (RGB).</p>
+{% extends "base.html" %}
+{% block title %}Classificar imagem · Water Clarity Lab{% endblock %}
 
-        <form action="/predict" method="post" enctype="multipart/form-data">
-            <input type="file" name="imagem" accept="image/*" required>
-            <button type="submit">Classificar</button>
+{% block content %}
+<section class="hero shell">
+    <div class="hero-copy">
+        <p class="eyebrow">Modo clássico · requisito da atividade</p>
+        <h1>A aparência da água, interpretada por RGB.</h1>
+        <p class="hero-text">Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai as cores e classifica a aparência como limpa ou suja.</p>
+        <div class="notice" role="note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Zm0 6v5m0 3v.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Esta análise visual não substitui testes químicos ou microbiológicos.</span>
+        </div>
+    </div>
+    <div class="hero-orbit" aria-hidden="true">
+        <div class="water-drop"><span>768+</span><small>features RGB</small></div>
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+    </div>
+</section>
+
+<section class="workspace shell" aria-labelledby="upload-title">
+    <div class="upload-card panel">
+        <div class="section-heading">
+            <p class="eyebrow">Nova análise</p>
+            <h2 id="upload-title">Enviar foto do copo</h2>
+            <p>PNG, JPG, BMP ou WebP · máximo de 16 MB.</p>
+        </div>
+
+        <form id="classification-form" action="{{ url_for('web.predict_fallback') }}" method="post" enctype="multipart/form-data">
+            <label class="drop-zone" for="image-input" id="drop-zone">
+                <input id="image-input" type="file" name="imagem" accept="image/png,image/jpeg,image/bmp,image/webp" required>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>Escolha uma imagem</strong>
+                <span id="file-label">ou arraste o arquivo para esta área</span>
+            </label>
+            <div id="preview-wrap" class="preview-wrap" hidden>
+                <img id="image-preview" alt="Prévia da imagem selecionada">
+            </div>
+            <button class="button button-primary" type="submit" id="submit-button">
+                <span class="button-label">Classificar aparência</span>
+                <span class="spinner" aria-hidden="true"></span>
+            </button>
+            <p id="form-status" class="form-status" aria-live="polite"></p>
         </form>
 
-        {% if error %}
-            <div class="card error">{{ error }}</div>
-        {% endif %}
+        {% if error %}<div class="message message-error" role="alert">{{ error }}</div>{% endif %}
+    </div>
 
-        {% if result %}
-            <div class="card result {{ 'clean' if result == 'limpo' else 'dirty' }}">
-                <h2>Resultado: {{ result|upper }}</h2>
-                <p>RGB medio detectado: R={{ rgb[0] }}, G={{ rgb[1] }}, B={{ rgb[2] }}</p>
-                <p>Modelo utilizado: {{ model_name }}</p>
-                {% if proba %}
-                    <p>Confianca: {{ proba }}%</p>
-                {% endif %}
-            </div>
-        {% endif %}
-    </main>
-</body>
-</html>
+    <aside class="result-card panel" id="result-card" aria-live="polite" {% if not result %}data-empty="true"{% endif %}>
+        <div id="empty-result" class="empty-result" {% if result %}hidden{% endif %}>
+            <svg viewBox="0 0 80 80" aria-hidden="true"><path d="M40 8C29 25 19 35 19 49a21 21 0 0 0 42 0C61 35 51 25 40 8Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M29 51c5 5 17 5 22 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <h2>Aguardando uma imagem</h2>
+            <p>O resultado e as características RGB aparecerão aqui.</p>
+        </div>
+
+        <div id="prediction-result" {% if not result %}hidden{% endif %}>
+            <p class="eyebrow">Classificação visual</p>
+            <div class="result-heading"><span class="status-dot" aria-hidden="true"></span><h2 id="result-label">{{ result.classification|upper if result else '' }}</h2></div>
+            <p id="result-message" class="result-message">{% if result %}A água foi classificada visualmente como {{ result.classification }}.{% endif %}</p>
+            <dl class="metrics-grid">
+                <div><dt>Probabilidade estimada</dt><dd id="result-confidence">{% if result and result.confidence is not none %}{{ (result.confidence * 100)|round(1) }}%{% else %}—{% endif %}</dd></div>
+                <div><dt>Modelo</dt><dd id="result-model">{{ result.model if result else '—' }}</dd></div>
+                <div class="metric-wide"><dt>RGB médio</dt><dd id="result-rgb">{% if result %}R {{ result.features.mean_rgb[0] }} · G {{ result.features.mean_rgb[1] }} · B {{ result.features.mean_rgb[2] }}{% else %}—{% endif %}</dd></div>
+            </dl>
+            <details class="explanation">
+                <summary>Como o sistema chegou nisso?</summary>
+                <ol><li>A fotografia é validada e convertida para RGB.</li><li>São extraídos histogramas e estatísticas de cor.</li><li>As características seguem o mesmo schema do treinamento.</li><li>O modelo vencedor produz a classificação.</li></ol>
+            </details>
+            <p id="result-warning" class="result-warning">{{ result.warning if result else '' }}</p>
+        </div>
+    </aside>
+</section>
+
+<section class="process-section shell" aria-labelledby="process-title">
+    <p class="eyebrow">Pipeline real</p><h2 id="process-title">Da imagem até a decisão</h2>
+    <ol class="process-flow">
+        <li><span>01</span><strong>Imagem</strong><small>Upload validado</small></li><li><span>02</span><strong>RGB</strong><small>3 × 256 bins</small></li><li><span>03</span><strong>Features</strong><small>Normalização</small></li><li><span>04</span><strong>Modelo</strong><small>Algoritmo vencedor</small></li><li><span>05</span><strong>Resultado</strong><small>Aparência visual</small></li>
+    </ol>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/classic.js') }}" defer></script>{% endblock %}

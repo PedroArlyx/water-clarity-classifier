@@ -1,77 +1,153 @@
-# Classificador de Copo de Água (Limpo/Sujo)
+# Water Clarity Classifier
 
-Aplicação que treina um modelo de classificação sobre o dataset `res.csv` e disponibiliza uma interface web onde o usuário envia uma foto de um copo de água e recebe a classificação **limpo** ou **sujo**.
+Classificador educacional que estima se a água de um copo parece **limpa** ou **suja** a partir de uma fotografia. O repositório reúne aquisição e auditoria de dados, engenharia de atributos RGB, comparação reproduzível de modelos, API Flask, interface clássica e uma demonstração 3D cujo robô envia uma captura real da cena ao mesmo classificador.
 
-## Dataset
+> **Aviso:** o sistema avalia somente aparência visual. Ele não comprova potabilidade nem segurança química ou microbiológica e não deve orientar consumo.
 
-`res.csv` contém 52 exemplos (50 originais + 2 fotos reais adicionadas via `add_to_dataset.py` para melhorar a generalização — ver nota abaixo). Cada linha representa uma imagem, descrita por um **histograma de cor** de 256 bins por canal (`r0..r255`, `g0..g255`, `b0..b255` — 768 features no total) mais a coluna `class` (`limpo` ou `sujo`).
+## Resultado atual
 
-Distribuição de classes: 37 `sujo` / 15 `limpo` (dataset pequeno e desbalanceado).
+O dataset preparado contém 61 amostras (23 `limpo`, 38 `sujo`) e 794 atributos. Em validação cruzada estratificada de cinco folds, o SVM venceu pelo critério definido previamente, F1 macro.
 
-> **Nota sobre generalização:** as 50 fotos originais parecem ter sido capturadas com o copo preenchendo quase todo o quadro (médias de RGB entre ~98–122 em todas as amostras). Fotos reais tiradas com celular, com mais fundo/parede no enquadramento, ficam fora dessa distribuição e podem ser classificadas incorretamente. Use `add_to_dataset.py <foto> <limpo|sujo> ...` para adicionar mais fotos reais ao dataset e rode `train_model.py` de novo — quanto mais variedade de enquadramento/iluminação nos exemplos, mais robusto o modelo fica para uso real.
+| Métrica do SVM | Média |
+|---|---:|
+| F1 macro | 0,7642 |
+| Acurácia balanceada | 0,7846 |
+| Acurácia | 0,7705 |
+| F1 ponderado | 0,7720 |
 
-## Metodologia (KDD)
+A matriz de confusão fora do treino foi `[[19, 4], [10, 28]]`, na ordem `limpo`, `sujo`. A variação entre folds é alta (desvio do F1 macro: 0,1608), portanto os números são preliminares, não uma validação de uso real.
 
-Implementada em `train_model.py`:
+## O que o projeto faz
 
-1. **Seleção dos dados** — carrega `res.csv`.
-2. **Pré-processamento** — remove nulos e duplicatas.
-3. **Transformação** — separa features (histograma RGB) do alvo (`class`), normaliza cada canal para frequência relativa (soma 1 por canal, invariante à resolução da foto) e codifica o rótulo.
-4. **Mineração de dados** — avalia 7 algoritmos de classificação com validação cruzada estratificada (5-fold): KNN, Decision Tree, Random Forest, Naive Bayes, SVM, Regressão Logística e Gradient Boosting. Modelos usam `class_weight="balanced"` (quando suportado) para compensar o desbalanceamento.
-5. **Interpretação/avaliação** — compara acurácia, precisão, recall e F1 (ponderados) entre os algoritmos.
-6. **Modelo final** — o algoritmo vencedor é retreinado com **todo** o dataset (sem divisão treino/teste) e salvo em `model/model.pkl`.
+- valida extensão, MIME, assinatura, formato, dimensões e limite de pixels do upload;
+- corrige orientação EXIF, converte a imagem para RGB e extrai 768 bins de histograma normalizados;
+- acrescenta estatísticas de canal e brilho, totalizando 794 atributos versionados;
+- compara KNN, Decision Tree, Random Forest, Gaussian Naive Bayes, SVM, Logistic Regression e Gradient Boosting;
+- usa `StratifiedKFold(5, shuffle=True, random_state=42)` e seleciona pelo F1 macro;
+- gera CSV de métricas, gráficos, matriz de confusão, schema e metadados do experimento;
+- retreina apenas o vencedor com 100% dos dados depois da avaliação;
+- atende upload tradicional e uma cozinha 3D interativa pelo mesmo endpoint de inferência;
+- expõe dashboard experimental e API JSON versionada;
+- cataloga procedência, licença, revisão e hash das imagens externas;
+- inclui testes, lint, CI e Blueprint de deploy para Render.
 
-### Resultado da avaliação (validação cruzada 5-fold, 52 amostras)
+## Início rápido
 
-| Modelo             | Acurácia | Precisão | Recall | F1     |
-|--------------------|----------|----------|--------|--------|
-| **SVM (vencedor)** | 0.769    | 0.794    | 0.769  | 0.776  |
-| Gradient Boosting  | 0.751    | 0.759    | 0.751  | 0.745  |
-| Random Forest      | 0.749    | 0.779    | 0.749  | 0.754  |
-| Naive Bayes        | 0.731    | 0.731    | 0.731  | 0.720  |
-| KNN                | 0.729    | 0.744    | 0.729  | 0.726  |
-| Logistic Regression| 0.673    | 0.710    | 0.673  | 0.684  |
-| Decision Tree      | 0.635    | 0.619    | 0.635  | 0.619  |
-
-O gráfico comparativo fica em `comparacao_modelos.png` e a tabela completa em `resultados_avaliacao.csv`.
-
-## Aplicação web
-
-- `app.py` — backend Flask com as rotas `/` (formulário de upload) e `/predict` (recebe a imagem, extrai as features e classifica).
-- `feature_extraction.py` — abre a imagem enviada e calcula o mesmo histograma de 768 bins (256 por canal R/G/B, normalizado por frequência relativa) usado no treinamento, além do RGB médio (exibido ao usuário). A normalização por total de pixels torna a predição invariante à resolução da foto enviada.
-- `templates/index.html` + `static/style.css` — interface de upload e exibição do resultado (classe prevista, RGB médio e confiança do modelo).
-
-## Como executar
+Requer Python 3.12.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 1. Treinar e avaliar os modelos (gera model/model.pkl)
-.venv\Scripts\python.exe train_model.py
-
-# 2. Rodar a aplicação web
-.venv\Scripts\python.exe app.py
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+python -m scripts.run
 ```
 
-Depois abra `http://127.0.0.1:5000` no navegador, envie uma foto de um copo de água e veja o resultado.
+Acesse `http://127.0.0.1:5000`. As páginas disponíveis são:
 
-## Estrutura do projeto
+- `/` — upload clássico;
+- `/demonstracao` — cozinha 3D e agente reativo;
+- `/experimento` — métricas e artefatos do treinamento;
+- `/api/v1/health` — estado do serviço e do modelo.
 
+## Pipeline de dados e treinamento
+
+O `res.csv.bak` preserva as 50 linhas legadas. As imagens aprovadas no catálogo `data/metadata/images.csv` são transformadas e combinadas a essa base para produzir `res.csv`.
+
+```bash
+# Reexecuta auditoria, preparação e treinamento completo
+python -m scripts.pipeline
+
+# Etapas independentes
+python -m scripts.audit_dataset
+python -m scripts.prepare_dataset
+python -m scripts.evaluate_models       # não substitui o modelo servido
+python -m scripts.train_final           # avalia e retreina o vencedor
 ```
-res.csv                    # dataset (histograma RGB + classe)
-train_model.py              # pipeline KDD: avaliação, escolha e treino do modelo final
-feature_extraction.py       # extração de features (histograma RGB) de uma imagem
-add_to_dataset.py           # adiciona novas fotos rotuladas ao res.csv
-app.py                      # backend Flask
-templates/index.html        # frontend (upload + resultado)
-static/style.css            # estilos da interface
-model/model.pkl             # modelo treinado (gerado por train_model.py)
-resultados_avaliacao.csv    # métricas de todos os algoritmos avaliados
-comparacao_modelos.png      # gráfico comparativo dos algoritmos
+
+Para importar novamente os candidatos selecionados do Wikimedia Commons é necessário acesso à internet:
+
+```bash
+python -m scripts.import_wikimedia
+python -m scripts.review_candidates
 ```
+
+Para catalogar uma nova imagem local, informe licença e autoria. Sem `--reviewed`, ela permanece pendente e não entra no dataset preparado.
+
+```bash
+python add_to_dataset.py foto.jpg limpo \
+  --license "CC BY-SA 4.0" --author "Nome" --source-url "https://..."
+python -m scripts.review_candidates
+python -m scripts.prepare_dataset
+```
+
+## API
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/predictions \
+  -F "image=@limpo2.jpg"
+```
+
+Resposta resumida:
+
+```json
+{
+  "data": {
+    "classification": "limpo",
+    "confidence": 0.9012,
+    "model": "SVM",
+    "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
+  }
+}
+```
+
+Consulte [docs/API.md](docs/API.md) para contratos, erros e todos os endpoints.
+
+## Qualidade
+
+```bash
+python -m pip install -r requirements-dev.txt
+ruff check .
+pytest
+node --check static/js/classic.js
+node --check static/js/demo3d.js
+```
+
+A integração contínua executa lint, testes e um smoke test dos metadados em `.github/workflows/ci.yml`.
+
+## Deploy no Render
+
+O `render.yaml` instala as dependências fixadas, inicia `gunicorn`, configura produção e monitora `/api/v1/health`. No Dashboard do Render, crie um **Blueprint** a partir deste repositório. Ao usar domínio próprio, acrescente-o a `TRUSTED_HOSTS`.
+
+## Estrutura principal
+
+```text
+water_clarity/          factory Flask, rotas, validação e serviço de ML
+scripts/                importação, auditoria, preparação, avaliação e execução
+templates/              upload, demonstração 3D, dashboard e erros
+static/                 CSS, JavaScript e Three.js local
+tests/                  testes unitários e de integração
+data/                   imagens brutas, catálogo, licenças e relatórios
+model/                  pipeline final, schema e metadados
+docs/                   arquitetura, API, dados, segurança e relatório
+```
+
+## Documentação
+
+- [Relatório técnico](docs/RELATORIO_ANALISE.md)
+- [Arquitetura e diagramas](docs/ARQUITETURA.md)
+- [Dados, licenças e rastreabilidade](docs/DADOS.md)
+- [API](docs/API.md)
+- [Revisão de segurança](docs/SEGURANCA.md)
+- [Atendimento aos requisitos](docs/ATENDIMENTO_ATIVIDADE.md)
 
 ## Limitações conhecidas
 
-- Dataset pequeno (52 amostras) e desbalanceado (37 sujo / 15 limpo), o que limita a robustez estatística da avaliação.
-- Fotos com composição/iluminação muito diferentes das do dataset (por exemplo, muito fundo/parede em vez do copo preenchendo o quadro) ainda podem reduzir a confiabilidade da predição — quanto mais fotos reais variadas forem adicionadas com `add_to_dataset.py`, melhor a generalização.
+- 50 amostras herdadas existem somente como histogramas; sem os arquivos brutos, não há auditoria visual nem agrupamento por sessão/origem para elas.
+- A base é pequena, desbalanceada e não representa condições variadas de iluminação, recipiente, câmera e tipos de contaminação.
+- Fotografias semelhantes podem induzir vazamento entre folds; o catálogo novo possui `group_id`, mas a base legada não.
+- Transparência ou cor não revela contaminantes invisíveis. O domínio do sistema é classificação visual binária, não potabilidade.
+- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado.
+
+## Licenças e terceiros
+
+As imagens externas mantêm URL, autor e licença no catálogo. Three.js 0.186.1 é distribuído sob MIT; o aviso está em `static/vendor/THREE-LICENSE.txt`. Consulte [docs/DADOS.md](docs/DADOS.md) antes de redistribuir o dataset.

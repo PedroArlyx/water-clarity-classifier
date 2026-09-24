@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+import io
+
+import numpy as np
+import pytest
+from PIL import Image
+
+from water_clarity.errors import InvalidImageError
+from water_clarity.ml.features import (
+    FEATURE_COLUMNS,
+    HISTOGRAM_FEATURES,
+    extract_features_from_image,
+    validate_image_bytes,
+)
+
+
+def test_histograms_are_normalized_and_schema_is_complete():
+    image = Image.new("RGB", (10, 10), color=(10, 20, 30))
+    features, means = extract_features_from_image(image)
+    assert len(FEATURE_COLUMNS) == 794
+    assert set(FEATURE_COLUMNS).issubset(features)
+    for channel in "rgb":
+        assert sum(features[f"{channel}{index}"] for index in range(256)) == pytest.approx(1.0)
+    assert means == pytest.approx((10.0, 20.0, 30.0))
+    assert features["brightness"] == pytest.approx(18.596)
+
+
+def test_histogram_feature_order_remains_rgb_baseline():
+    assert HISTOGRAM_FEATURES[0] == "r0"
+    assert HISTOGRAM_FEATURES[255] == "r255"
+    assert HISTOGRAM_FEATURES[256] == "g0"
+    assert HISTOGRAM_FEATURES[-1] == "b255"
+
+
+def test_corrupt_image_is_rejected():
+    with pytest.raises(InvalidImageError, match="corrompido"):
+        validate_image_bytes(b"not an image", filename="fake.jpg", declared_mime="image/jpeg")
+
+
+def test_extension_spoofing_is_rejected(png_bytes):
+    with pytest.raises(InvalidImageError, match="extensão"):
+        validate_image_bytes(png_bytes, filename="fake.jpg", declared_mime="image/png")
+
+
+def test_mime_spoofing_is_rejected(png_bytes):
+    with pytest.raises(InvalidImageError, match="MIME"):
+        validate_image_bytes(png_bytes, filename="valid.png", declared_mime="image/jpeg")
+
+
+def test_excessive_dimensions_are_rejected():
+    buffer = io.BytesIO()
+    Image.fromarray(np.zeros((1, 8193, 3), dtype=np.uint8)).save(buffer, format="PNG")
+    with pytest.raises(InvalidImageError, match="dimensões"):
+        validate_image_bytes(buffer.getvalue(), filename="wide.png", declared_mime="image/png")
+

@@ -1,27 +1,20 @@
-import numpy as np
-from PIL import Image
+"""Camada de compatibilidade para o extrator RGB original."""
 
-CHANNELS = ("r", "g", "b")
+from __future__ import annotations
+
+from water_clarity.ml.features import (
+    extract_features_from_image,
+    read_limited,
+    to_feature_vector,
+    validate_image_bytes,
+)
 
 
 def extract_rgb_histogram(file_stream):
-    """Retorna dict {r0..r255, g0..g255, b0..b255} = frequencia relativa de
-    pixels por intensidade em cada canal (soma 1 por canal). Normalizar pelo
-    total de pixels torna o histograma invariante ao tamanho/resolucao da
-    foto, igual ao pre-processamento usado para gerar res.csv."""
-    img = Image.open(file_stream).convert("RGB")
-    arr = np.asarray(img)
-    total_pixels = arr.shape[0] * arr.shape[1]
-
-    features = {}
-    for i, ch in enumerate(CHANNELS):
-        hist = np.bincount(arr[:, :, i].ravel(), minlength=256)
-        for bin_idx, count in enumerate(hist):
-            features[f"{ch}{bin_idx}"] = count / total_pixels
-
-    means = (arr[:, :, 0].mean(), arr[:, :, 1].mean(), arr[:, :, 2].mean())
-    return features, means
+    payload = read_limited(file_stream)
+    filename = getattr(file_stream, "name", "upload.jpg")
+    image, _ = validate_image_bytes(payload, filename=filename, declared_mime=None)
+    return extract_features_from_image(image)
 
 
-def to_feature_vector(features, feature_columns):
-    return [features[col] for col in feature_columns]
+__all__ = ["extract_rgb_histogram", "to_feature_vector"]

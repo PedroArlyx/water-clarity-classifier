@@ -1,0 +1,93 @@
+- generic [active] [ref=f2e1]:
+  - link "Pular para o conteúdo" [ref=f2e2] [cursor=pointer]:
+    - /url: "#conteudo"
+  - banner [ref=f2e3]:
+    - link "Water Clarity Lab — início" [ref=f2e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f2e8]:
+        - strong [ref=f2e9]: Water Clarity
+        - generic [ref=f2e10]: Visual Intelligence Lab
+    - navigation "Navegação principal" [ref=f2e11]:
+      - link "Classificar" [ref=f2e12] [cursor=pointer]:
+        - /url: /
+      - link "Cozinha 3D" [ref=f2e13] [cursor=pointer]:
+        - /url: /demonstracao
+      - link "Experimento" [ref=f2e14] [cursor=pointer]:
+        - /url: /experimento
+  - main [ref=f2e15]:
+    - generic [ref=f2e16]:
+      - generic [ref=f2e17]:
+        - generic [ref=f2e18]:
+          - paragraph [ref=f2e19]: Modo demonstração · agente interativo
+          - heading "O robô observa antes de entregar." [level=1] [ref=f2e20]
+          - paragraph [ref=f2e21]: Escolha apenas a aparência da água. A cena será capturada e enviada ao modelo real — nenhum rótulo é enviado à API.
+        - generic [ref=f2e24]:
+          - generic [ref=f2e25]: Estado do agente
+          - strong [ref=f2e26]: "Aparência limpa: entregando com ressalva científica."
+      - generic [ref=f2e27]:
+        - region [ref=f2e28]:
+          - generic [ref=f2e29]:
+            - generic [ref=f2e30]:
+              - paragraph [ref=f2e31]: Ambiente
+              - heading "Cozinha interativa" [level=2] [ref=f2e32]
+            - button "Redefinir câmera" [ref=f2e33] [cursor=pointer]
+          - generic [ref=f2e34]:
+            - img "Cozinha 3D interativa com robô, bancada, pia, torneira e copo de água." [ref=f2e35]
+            - generic [aria-hidden]:
+              - generic: Arraste para observar
+              - generic: Role para aproximar
+          - paragraph [ref=f2e36]: Cena 3D de uma cozinha com bancada, pia, torneira, copo e robô assistente. Arraste para girar a câmera.
+        - complementary [ref=f2e37]:
+          - generic [ref=f2e38]:
+            - text: Solicitação
+            - paragraph [ref=f2e39]: “Robô, pegue um copo de água para mim.”
+          - group "Escolha a aparência renderizada" [ref=f2e40]:
+            - paragraph [ref=f2e42]: Esta escolha altera cor, transparência e turbidez — não envia uma classe.
+            - generic [ref=f2e43] [cursor=pointer]:
+              - radio "Visualmente limpa Alta transparência, tom neutro" [ref=f2e44]
+              - generic [ref=f2e45]:
+                - strong [ref=f2e46]: Visualmente limpa
+                - generic [ref=f2e47]: Alta transparência, tom neutro
+            - generic [ref=f2e48] [cursor=pointer]:
+              - radio "Visualmente suja Maior turbidez, tom amarronzado" [checked] [ref=f2e49]
+              - generic [ref=f2e50]:
+                - strong [ref=f2e51]: Visualmente suja
+                - generic [ref=f2e52]: Maior turbidez, tom amarronzado
+            - generic [ref=f2e53] [cursor=pointer]:
+              - radio "Aparência aleatória O agente não conhece a classe" [ref=f2e54]
+              - generic [ref=f2e55]:
+                - strong [ref=f2e56]: Aparência aleatória
+                - generic [ref=f2e57]: O agente não conhece a classe
+            - generic [ref=f2e58] [cursor=pointer]:
+              - radio "Upload próprio Executa a cena e classifica sua fotografia" [ref=f2e59]
+              - generic [ref=f2e60]:
+                - strong [ref=f2e61]: Upload próprio
+                - generic [ref=f2e62]: Executa a cena e classifica sua fotografia
+            - button "Imagem própria para a demonstração" [ref=f2e63]
+          - button "Iniciar sequência do agente" [ref=f2e64] [cursor=pointer]
+          - list "Etapas da tarefa" [ref=f2e66]:
+            - listitem [ref=f2e67]: Solicitação recebida
+            - listitem [ref=f2e69]: Coletar água na pia
+            - listitem [ref=f2e71]: Capturar aparência do copo
+            - listitem [ref=f2e73]: Consultar classificador RGB
+            - listitem [ref=f2e75]: Decidir entregar ou alertar
+          - generic [ref=f2e81]:
+            - paragraph [ref=f2e82]: Resposta real da API
+            - heading "LIMPO" [level=2] [ref=f2e83]
+            - paragraph [ref=f2e84]: Visualmente, a água foi classificada como limpa. O robô pode entregar o copo, mantendo o aviso de que aparência não comprova potabilidade.
+            - generic [ref=f2e85]:
+              - generic [ref=f2e86]:
+                - term [ref=f2e87]: Probabilidade estimada
+                - definition [ref=f2e88]: 72.4%
+              - generic [ref=f2e89]:
+                - term [ref=f2e90]: Modelo
+                - definition [ref=f2e91]: SVM
+              - generic [ref=f2e92]:
+                - term [ref=f2e93]: RGB médio
+                - definition [ref=f2e94]: R 141.44 · G 157.81 · B 160.21
+            - paragraph [ref=f2e95]: Resultado visual; não é uma análise de potabilidade.
+  - contentinfo [ref=f2e77]:
+    - paragraph [ref=f2e78]:
+      - strong [ref=f2e79]: "Aviso científico:"
+      - text: o sistema analisa somente a aparência visual. Não determina potabilidade.
+    - paragraph [ref=f2e80]: Projeto acadêmico · Pipeline RGB + classificação tradicional

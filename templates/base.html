@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Classificador acadêmico de aparência visual da água com características RGB.">
+    <title>{% block title %}Water Clarity Lab{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="page-{{ page|default('default') }}">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('web.index') }}" aria-label="Water Clarity Lab — início">
+            <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+                <path d="M20 3C14 12 8 18 8 25a12 12 0 0 0 24 0c0-7-6-13-12-22Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M13 26c3 3 11 3 14 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span><strong>Water Clarity</strong><small>Visual Intelligence Lab</small></span>
+        </a>
+        <nav aria-label="Navegação principal">
+            <a href="{{ url_for('web.index') }}" {% if page == 'classic' %}aria-current="page"{% endif %}>Classificar</a>
+            <a href="{{ url_for('web.demonstration') }}" {% if page == 'demo' %}aria-current="page"{% endif %}>Cozinha 3D</a>
+            <a href="{{ url_for('web.experiment') }}" {% if page == 'experiment' %}aria-current="page"{% endif %}>Experimento</a>
+        </nav>
+    </header>
+
+    <main id="conteudo" tabindex="-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <p><strong>Aviso científico:</strong> o sistema analisa somente a aparência visual. Não determina potabilidade.</p>
+        <p>Projeto acadêmico · Pipeline RGB + classificação tradicional</p>
+    </footer>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
