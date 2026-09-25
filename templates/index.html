@@ -2,81 +2,104 @@
 {% block title %}Classificar imagem · Water Clarity Lab{% endblock %}
 
 {% block content %}
-<section class="hero shell">
-    <div class="hero-copy">
-        <p class="eyebrow">Modo clássico · requisito da atividade</p>
-        <h1>A aparência da água, interpretada por RGB.</h1>
-        <p class="hero-text">Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai as cores e classifica a aparência como limpa ou suja.</p>
-        <div class="notice" role="note">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Zm0 6v5m0 3v.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Esta análise visual não substitui testes químicos ou microbiológicos.</span>
-        </div>
-    </div>
-    <div class="hero-orbit" aria-hidden="true">
-        <div class="water-drop"><span>768+</span><small>features RGB</small></div>
-        <div class="orbit orbit-one"></div>
-        <div class="orbit orbit-two"></div>
+<section class="page-hero shell">
+    <p class="kicker">Modo clássico · requisito da atividade</p>
+    <h1>A aparência da água, interpretada por RGB.</h1>
+    <p class="lead">Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai histogramas de cor e o modelo vencedor classifica a aparência como limpa ou suja.</p>
+    <div class="notice" role="note">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 20h18.4L12 3.5Zm0 6v4.5m0 3v.1"/></svg>
+        <span>Esta análise é apenas visual e não substitui testes químicos ou microbiológicos.</span>
     </div>
 </section>
 
-<section class="workspace shell" aria-labelledby="upload-title">
-    <div class="upload-card panel">
-        <div class="section-heading">
-            <p class="eyebrow">Nova análise</p>
+<section class="classify shell" aria-labelledby="upload-title">
+    <div class="card">
+        <div class="section-title">
+            <p class="kicker">Nova análise</p>
             <h2 id="upload-title">Enviar foto do copo</h2>
-            <p>PNG, JPG, BMP ou WebP · máximo de 16 MB.</p>
+            <p>PNG, JPG, BMP ou WebP · até 16 MB · processada em memória, sem armazenamento.</p>
         </div>
-
         <form id="classification-form" action="{{ url_for('web.predict_fallback') }}" method="post" enctype="multipart/form-data">
             <label class="drop-zone" for="image-input" id="drop-zone">
                 <input id="image-input" type="file" name="imagem" accept="image/png,image/jpeg,image/bmp,image/webp" required>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5"/></svg>
                 <strong>Escolha uma imagem</strong>
                 <span id="file-label">ou arraste o arquivo para esta área</span>
             </label>
             <div id="preview-wrap" class="preview-wrap" hidden>
                 <img id="image-preview" alt="Prévia da imagem selecionada">
             </div>
-            <button class="button button-primary" type="submit" id="submit-button">
-                <span class="button-label">Classificar aparência</span>
+            <button class="btn btn--primary btn--lg" type="submit" id="submit-button">
                 <span class="spinner" aria-hidden="true"></span>
+                <span class="button-label">Classificar aparência</span>
             </button>
             <p id="form-status" class="form-status" aria-live="polite"></p>
         </form>
-
-        {% if error %}<div class="message message-error" role="alert">{{ error }}</div>{% endif %}
+        {% if error %}<div class="message-error" role="alert">{{ error }}</div>{% endif %}
     </div>
 
-    <aside class="result-card panel" id="result-card" aria-live="polite" {% if not result %}data-empty="true"{% endif %}>
+    <aside class="card result-panel" id="result-card" aria-live="polite" {% if result %}data-classification="{{ result.classification }}"{% endif %}>
         <div id="empty-result" class="empty-result" {% if result %}hidden{% endif %}>
-            <svg viewBox="0 0 80 80" aria-hidden="true"><path d="M40 8C29 25 19 35 19 49a21 21 0 0 0 42 0C61 35 51 25 40 8Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M29 51c5 5 17 5 22 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7c-9 13.5-17 22-17 32a17 17 0 0 0 34 0c0-10-8-18.5-17-32Z"/><path d="M24 42a8.5 8.5 0 0 0 8 6.5"/></svg>
             <h2>Aguardando uma imagem</h2>
-            <p>O resultado e as características RGB aparecerão aqui.</p>
+            <p>O resultado, a probabilidade estimada e as características RGB extraídas aparecerão aqui.</p>
         </div>
 
-        <div id="prediction-result" {% if not result %}hidden{% endif %}>
-            <p class="eyebrow">Classificação visual</p>
-            <div class="result-heading"><span class="status-dot" aria-hidden="true"></span><h2 id="result-label">{{ result.classification|upper if result else '' }}</h2></div>
-            <p id="result-message" class="result-message">{% if result %}A água foi classificada visualmente como {{ result.classification }}.{% endif %}</p>
-            <dl class="metrics-grid">
+        <div id="prediction-result" class="prediction" {% if not result %}hidden{% endif %}>
+            <div class="prediction__head">
+                <p class="kicker">Classificação visual</p>
+                {% set clean = result and result.classification == 'limpo' %}
+                <span id="result-badge" class="verdict {{ 'verdict--clean' if clean else 'verdict--dirty' }}">{{ ('Visualmente limpa' if clean else 'Visualmente suja') if result else '' }}</span>
+                <h2 id="result-label">{{ ('Limpa' if clean else 'Suja') if result else '' }}</h2>
+                <p id="result-message" class="prediction__message">{% if result %}A água foi classificada visualmente como {{ result.classification }}.{% endif %}</p>
+            </div>
+            <dl class="facts">
                 <div><dt>Probabilidade estimada</dt><dd id="result-confidence">{% if result and result.confidence is not none %}{{ (result.confidence * 100)|round(1) }}%{% else %}—{% endif %}</dd></div>
                 <div><dt>Modelo</dt><dd id="result-model">{{ result.model if result else '—' }}</dd></div>
-                <div class="metric-wide"><dt>RGB médio</dt><dd id="result-rgb">{% if result %}R {{ result.features.mean_rgb[0] }} · G {{ result.features.mean_rgb[1] }} · B {{ result.features.mean_rgb[2] }}{% else %}—{% endif %}</dd></div>
+                <div><dt>Atributos extraídos</dt><dd id="result-features">{{ result.features.count if result and result.features.count else '—' }}</dd></div>
             </dl>
+            <div>
+                <p class="kicker">RGB médio</p>
+                <div class="rgb-meter" id="result-rgb" data-rgb="{{ result.features.mean_rgb|join(',') if result else '' }}">{% if result %}<p class="mono">R {{ result.features.mean_rgb[0] }} · G {{ result.features.mean_rgb[1] }} · B {{ result.features.mean_rgb[2] }}</p>{% endif %}</div>
+            </div>
+            <div id="histogram-block" hidden>
+                <p class="kicker">Histograma RGB (32 faixas)</p>
+                <svg class="histogram" id="result-histogram" viewBox="0 0 320 140" role="img" aria-label="Histograma RGB da imagem enviada"></svg>
+            </div>
             <details class="explanation">
                 <summary>Como o sistema chegou nisso?</summary>
-                <ol><li>A fotografia é validada e convertida para RGB.</li><li>São extraídos histogramas e estatísticas de cor.</li><li>As características seguem o mesmo schema do treinamento.</li><li>O modelo vencedor produz a classificação.</li></ol>
+                <ol>
+                    <li>A fotografia é validada (extensão, MIME, assinatura, dimensões) e convertida para RGB.</li>
+                    <li>São extraídos 768 valores de histograma (3 canais × 256 níveis) e 26 estatísticas de cor.</li>
+                    <li>As características seguem o mesmo schema usado no treinamento.</li>
+                    <li>O pipeline do modelo vencedor (<span id="result-steps">normalização + classificador</span>) produz a classificação.</li>
+                </ol>
             </details>
             <p id="result-warning" class="result-warning">{{ result.warning if result else '' }}</p>
         </div>
     </aside>
 </section>
 
-<section class="process-section shell" aria-labelledby="process-title">
-    <p class="eyebrow">Pipeline real</p><h2 id="process-title">Da imagem até a decisão</h2>
-    <ol class="process-flow">
-        <li><span>01</span><strong>Imagem</strong><small>Upload validado</small></li><li><span>02</span><strong>RGB</strong><small>3 × 256 bins</small></li><li><span>03</span><strong>Features</strong><small>Normalização</small></li><li><span>04</span><strong>Modelo</strong><small>Algoritmo vencedor</small></li><li><span>05</span><strong>Resultado</strong><small>Aparência visual</small></li>
+<section class="process shell" aria-labelledby="process-title">
+    <div class="section-title">
+        <p class="kicker">Pipeline real</p>
+        <h2 id="process-title">Da imagem até a decisão</h2>
+    </div>
+    <ol class="flow">
+        <li><strong>Imagem</strong><small>upload validado</small></li>
+        <li><strong>RGB</strong><small>3 canais × 256 níveis</small></li>
+        <li><strong>Features</strong><small>histogramas + estatísticas</small></li>
+        <li><strong>Normalização</strong><small>schema do treino</small></li>
+        <li><strong>Modelo</strong><small>algoritmo vencedor</small></li>
+        <li><strong>Resultado</strong><small>aparência visual</small></li>
     </ol>
+    <div class="cta-3d">
+        <div>
+            <h2>Veja o mesmo modelo dentro de um agente 3D</h2>
+            <p>Um robô coleta a água, fotografa o copo numa estação de visão e consulta esta mesma API.</p>
+        </div>
+        <a class="btn btn--light" href="{{ url_for('web.demonstration') }}">Abrir Water Vision</a>
+    </div>
 </section>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/classic.js') }}" defer></script>{% endblock %}

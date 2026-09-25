@@ -12,6 +12,8 @@ import numpy as np
 
 from water_clarity.errors import ModelUnavailableError
 from water_clarity.ml.features import (
+    CHANNELS,
+    HISTOGRAM_FEATURES,
     extract_features_from_image,
     read_limited,
     to_feature_vector,
@@ -33,12 +35,45 @@ class Prediction:
     mean_rgb: tuple[float, float, float]
     image: dict[str, object]
     warning: str = VISUAL_ONLY_WARNING
+    histogram: dict[str, list[float]] | None = None
+    feature_summary: dict[str, object] | None = None
+    pipeline: list[dict[str, str]] | None = None
+    probabilities: dict[str, float] | None = None
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
-        payload["features"] = {"mean_rgb": list(self.mean_rgb)}
-        payload.pop("mean_rgb")
+        features: dict[str, object] = {"mean_rgb": list(self.mean_rgb)}
+        if self.histogram is not None:
+            features["histogram"] = self.histogram
+        if self.feature_summary is not None:
+            features.update(self.feature_summary)
+        payload["features"] = features
+        for key in ("mean_rgb", "histogram", "feature_summary"):
+            payload.pop(key)
+        if self.pipeline is None:
+            payload.pop("pipeline")
+        if self.probabilities is None:
+            payload.pop("probabilities")
         return payload
+
+
+def _histogram_bins(features: dict[str, float], bins: int = 32) -> dict[str, list[float]]:
+    """Agrupa os 256 bins reais de cada canal em ``bins`` faixas para visualização."""
+    width = 256 // bins
+    return {
+        channel: [
+            round(sum(features[f"{channel}{index}"] for index in range(start, start + width)), 5)
+            for start in range(0, 256, width)
+        ]
+        for channel in CHANNELS
+    }
+
+
+def _pipeline_steps(pipeline) -> list[dict[str, str]]:
+    steps = getattr(pipeline, "steps", None)
+    if not steps:
+        return [{"name": "model", "estimator": type(pipeline).__name__}]
+    return [{"name": str(name), "estimator": type(step).__name__} for name, step in steps]
 
 
 class ModelService:
@@ -106,9 +141,14 @@ class ModelService:
         label = str(encoder.inverse_transform([prediction])[0])
 
         confidence = None
+        class_probabilities = None
         if hasattr(pipeline, "predict_proba"):
             probabilities = pipeline.predict_proba(vector)[0]
             confidence = round(float(np.max(probabilities)), 4)
+            class_labels = encoder.inverse_transform(getattr(pipeline, "classes_", np.arange(len(probabilities))))
+            class_probabilities = {
+                str(name): round(float(value), 4) for name, value in zip(class_labels, probabilities)
+            }
 
         return Prediction(
             classification=label,
@@ -121,6 +161,15 @@ class ModelService:
                 "format": image_info.format,
                 "mime_type": image_info.mime_type,
             },
+            histogram=_histogram_bins(features),
+            feature_summary={
+                "count": len(columns),
+                "histogram_count": len(HISTOGRAM_FEATURES),
+                "engineered_count": len(columns) - len(HISTOGRAM_FEATURES),
+                "schema_version": str(bundle.get("feature_schema_version", "legado")),
+            },
+            pipeline=_pipeline_steps(pipeline),
+            probabilities=class_probabilities,
         )
 
 

@@ -82,3 +82,22 @@ def test_metadata_matches_saved_artifact(client):
     assert metadata["dataset"]["samples"] == 61
     assert metadata["feature_schema"]["count"] == 794
     assert metadata["primary_metric"] == "f1_macro"
+
+
+def test_prediction_exposes_real_pipeline_details(client):
+    with (PROJECT_ROOT / "limpo2.jpg").open("rb") as image:
+        body = client.post(
+            "/api/v1/predictions",
+            data={"image": (image, "limpo2.jpg", "image/jpeg")},
+            content_type="multipart/form-data",
+        ).get_json()["data"]
+    features = body["features"]
+    assert features["count"] == 794
+    assert features["histogram_count"] == 768
+    assert features["engineered_count"] == 26
+    for channel in ("r", "g", "b"):
+        assert len(features["histogram"][channel]) == 32
+        assert abs(sum(features["histogram"][channel]) - 1) < 1e-3
+    assert body["pipeline"] and all(step["estimator"] for step in body["pipeline"])
+    assert set(body["probabilities"]) == {"limpo", "sujo"}
+    assert abs(sum(body["probabilities"].values()) - 1) < 1e-3

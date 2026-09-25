@@ -1,43 +1,172 @@
 {% extends "base.html" %}
-{% block title %}Cozinha 3D · Water Clarity Lab{% endblock %}
+{% block title %}Water Vision · Cozinha 3D · Water Clarity Lab{% endblock %}
 {% block content %}
-<section class="demo-shell">
-    <div class="demo-header shell">
-        <div><p class="eyebrow">Modo demonstração · agente interativo</p><h1>O robô observa antes de entregar.</h1><p>Escolha apenas a aparência da água. A cena será capturada e enviada ao modelo real — nenhum rótulo é enviado à API.</p></div>
-        <div class="agent-status" aria-live="polite"><span class="status-light" aria-hidden="true"></span><div><small>Estado do agente</small><strong id="agent-state">Pronto para receber uma tarefa</strong></div></div>
-    </div>
+<section class="xp" id="xp" data-phase="intro" aria-labelledby="xp-title">
+    <div class="xp-stage" id="scene-container"></div>
+    <div class="xp-vignette" aria-hidden="true"></div>
 
-    <div class="demo-grid shell">
-        <section class="scene-card panel" aria-labelledby="scene-title">
-            <div class="scene-toolbar"><div><p class="eyebrow">Ambiente</p><h2 id="scene-title">Cozinha interativa</h2></div><button class="button button-ghost" type="button" id="reset-camera">Redefinir câmera</button></div>
-            <div id="scene-container" class="scene-container">
-                <div id="webgl-fallback" class="webgl-fallback" hidden><h3>Visualização 3D indisponível</h3><p>Seu navegador não conseguiu iniciar WebGL. O classificador continua disponível no modo clássico.</p><a class="button button-primary" href="{{ url_for('web.index') }}">Abrir modo clássico</a></div>
-                <div class="scene-overlay" aria-hidden="true"><span>Arraste para observar</span><span>Role para aproximar</span></div>
+    <div class="xp-intro" id="xp-intro">
+        <div class="xp-intro__inner">
+            <p class="kicker">Water Clarity Lab · Demonstração do agente</p>
+            <h1 class="xp-title" id="xp-title">Water Vision</h1>
+            <p class="xp-lead">Agente inteligente para análise visual de água</p>
+            <p class="xp-sub">Um robô doméstico coleta água, fotografa o copo em uma estação de visão e consulta o mesmo modelo de Machine Learning usado no classificador.</p>
+            <div class="xp-intro__actions">
+                <button class="btn btn--light btn--lg" type="button" id="xp-start">Iniciar experiência</button>
             </div>
-            <p class="scene-description" id="scene-description">Cena 3D de uma cozinha com bancada, pia, torneira, copo e robô assistente. Arraste para girar a câmera.</p>
-        </section>
-
-        <aside class="agent-panel panel">
-            <div class="request-bubble"><small>Solicitação</small><p>“Robô, pegue um copo de água para mim.”</p></div>
-            <fieldset class="demo-options" id="demo-options">
-                <legend>Escolha a aparência renderizada</legend><p>Esta escolha altera cor, transparência e turbidez — não envia uma classe.</p>
-                <label><input type="radio" name="water-mode" value="clean" checked><span><strong>Visualmente limpa</strong><small>Alta transparência, tom neutro</small></span></label>
-                <label><input type="radio" name="water-mode" value="dirty"><span><strong>Visualmente suja</strong><small>Maior turbidez, tom amarronzado</small></span></label>
-                <label><input type="radio" name="water-mode" value="random"><span><strong>Aparência aleatória</strong><small>O agente não conhece a classe</small></span></label>
-                <label><input type="radio" name="water-mode" value="upload"><span><strong>Upload próprio</strong><small>Executa a cena e classifica sua fotografia</small></span></label>
-                <input class="demo-file" id="demo-upload" type="file" accept="image/png,image/jpeg,image/bmp,image/webp" aria-label="Imagem própria para a demonstração">
-            </fieldset>
-            <button class="button button-primary" type="button" id="start-demo"><span class="button-label">Iniciar sequência do agente</span><span class="spinner" aria-hidden="true"></span></button>
-            <ol class="agent-timeline" id="agent-timeline" aria-label="Etapas da tarefa">
-                <li data-step="request"><span></span>Solicitação recebida</li><li data-step="collect"><span></span>Coletar água na pia</li><li data-step="capture"><span></span>Capturar aparência do copo</li><li data-step="classify"><span></span>Consultar classificador RGB</li><li data-step="decide"><span></span>Decidir entregar ou alertar</li>
+            <ol class="xp-loading" id="xp-loading" hidden aria-live="polite">
+                <li data-load="env"><span class="xp-loading__mark" aria-hidden="true"></span>Preparando ambiente</li>
+                <li data-load="agent"><span class="xp-loading__mark" aria-hidden="true"></span>Carregando agente</li>
+                <li data-load="model"><span class="xp-loading__mark" aria-hidden="true"></span>Carregando modelo</li>
+                <li data-load="sim"><span class="xp-loading__mark" aria-hidden="true"></span>Preparando simulação</li>
             </ol>
-            <div class="demo-result" id="demo-result" hidden aria-live="polite">
-                <p class="eyebrow">Resposta real da API</p><h2 id="demo-result-label">—</h2><p id="demo-result-message"></p>
-                <dl><div><dt>Probabilidade estimada</dt><dd id="demo-confidence">—</dd></div><div><dt>Modelo</dt><dd id="demo-model">—</dd></div><div><dt>RGB médio</dt><dd id="demo-rgb">—</dd></div></dl>
-                <p class="result-warning">Resultado visual; não é uma análise de potabilidade.</p>
+            <button class="btn btn--light btn--lg" type="button" id="xp-enter" hidden>Entrar na cozinha</button>
+            <div class="xp-fallback" id="webgl-fallback" hidden role="alert">
+                <h2>Visualização 3D indisponível</h2>
+                <p>Este navegador não conseguiu iniciar WebGL. O mesmo modelo continua disponível no modo clássico, com upload de fotografia.</p>
+                <a class="btn btn--light" href="{{ url_for('web.index') }}">Abrir modo clássico</a>
             </div>
-        </aside>
+            <p class="xp-intro__note">A classificação exibida sempre vem da API real. Nenhum rótulo é enviado pela cena.</p>
+        </div>
     </div>
+
+    <div class="xp-toolbar" id="xp-toolbar" hidden>
+        <div class="segmented segmented--dark" role="radiogroup" aria-label="Modo de câmera">
+            <button type="button" role="radio" aria-checked="true" data-camera="demo">Demonstração</button>
+            <button type="button" role="radio" aria-checked="false" data-camera="free">Livre</button>
+        </div>
+        <label class="select select--dark">
+            <span class="visually-hidden">Qualidade gráfica</span>
+            <select id="xp-quality" aria-label="Qualidade gráfica">
+                <option value="auto">Qualidade: Auto</option>
+                <option value="high">Qualidade: Alta</option>
+                <option value="medium">Qualidade: Média</option>
+                <option value="low">Qualidade: Baixa</option>
+            </select>
+        </label>
+        <button class="icon-btn" type="button" id="xp-sound" aria-pressed="false" aria-label="Som ambiente desligado">
+            <svg class="icon icon--off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m17 9 4 6m0-6-4 6"/></svg>
+            <svg class="icon icon--on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        </button>
+    </div>
+
+    <aside class="hud glass" id="hud" hidden aria-label="Estado do agente">
+        <div class="hud__row">
+            <span class="hud__label">Agente</span>
+            <span class="hud__state"><span class="pulse" aria-hidden="true"></span><strong id="agent-state" aria-live="polite">Aguardando solicitação</strong></span>
+        </div>
+        <div class="hud__row">
+            <span class="hud__label">Modelo</span>
+            <strong class="mono" id="hud-model">—</strong>
+        </div>
+        <ol class="hud__pipeline" aria-label="Pipeline de análise">
+            <li data-pipe="capture">Captura</li>
+            <li data-pipe="rgb">RGB</li>
+            <li data-pipe="features">Features</li>
+            <li data-pipe="model">Classificação</li>
+            <li data-pipe="decision">Decisão</li>
+        </ol>
+    </aside>
+
+    <section class="assistant glass" id="assistant" hidden aria-labelledby="assistant-title">
+        <header class="assistant__head">
+            <span class="assistant__avatar" aria-hidden="true"></span>
+            <div><h2 id="assistant-title">Assistente</h2><p>Robô doméstico · visão computacional</p></div>
+        </header>
+        <div class="assistant__log" id="assistant-log" aria-live="polite">
+            <p class="bubble bubble--agent">O que posso fazer por você?</p>
+        </div>
+        <div class="assistant__controls" id="assistant-controls">
+            <fieldset class="water-choice">
+                <legend>Água da torneira <span>(simulação visual)</span></legend>
+                <div class="segmented segmented--dark segmented--wrap" role="radiogroup" aria-label="Aparência da água simulada">
+                    <button type="button" role="radio" aria-checked="true" data-water="clean">Limpa</button>
+                    <button type="button" role="radio" aria-checked="false" data-water="dirty">Turva</button>
+                    <button type="button" role="radio" aria-checked="false" data-water="random">Aleatória</button>
+                    <button type="button" role="radio" aria-checked="false" data-water="upload">Minha foto</button>
+                </div>
+                <p class="water-choice__hint" id="water-hint">Altera só o material renderizado. O rótulo nunca é enviado à API.</p>
+                <label class="file-pick" id="file-pick" hidden>
+                    <input type="file" id="demo-upload" accept="image/png,image/jpeg,image/bmp,image/webp">
+                    <span id="file-pick-label">Escolher fotografia do copo…</span>
+                </label>
+            </fieldset>
+            <button class="btn btn--light btn--block" type="button" id="start-demo">Pegue um copo de água para mim</button>
+        </div>
+        <div class="assistant__running" id="assistant-running" hidden>
+            <button class="btn btn--ghost-dark btn--sm" type="button" id="xp-speed" aria-pressed="false">Acelerar animação</button>
+        </div>
+        <div class="assistant__after" id="assistant-after" hidden>
+            <button class="btn btn--light btn--sm" type="button" id="xp-view">Ver análise</button>
+            <button class="btn btn--ghost-dark btn--sm" type="button" id="xp-again">Nova solicitação</button>
+        </div>
+    </section>
+
+    <section class="analysis glass" id="analysis" hidden aria-labelledby="analysis-title" aria-live="polite">
+        <h2 class="kicker" id="analysis-title">Análise visual</h2>
+        <div class="analysis__body">
+            <figure class="analysis__shot">
+                <img id="analysis-image" alt="Imagem enviada ao modelo">
+                <figcaption id="analysis-caption">—</figcaption>
+            </figure>
+            <ol class="analysis__steps" id="analysis-steps">
+                <li data-step="capture"><span class="dot" aria-hidden="true"></span><span>Captura visual</span><em></em></li>
+                <li data-step="rgb"><span class="dot" aria-hidden="true"></span><span>Extraindo RGB</span><em></em></li>
+                <li data-step="features"><span class="dot" aria-hidden="true"></span><span>Gerando features</span><em></em></li>
+                <li data-step="model"><span class="dot" aria-hidden="true"></span><span>Executando modelo</span><em></em></li>
+                <li data-step="done"><span class="dot" aria-hidden="true"></span><span>Classificação concluída</span><em></em></li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="result-card" id="result" hidden aria-labelledby="result-label" data-class="">
+        <p class="kicker">Análise concluída</p>
+        <div class="result-card__verdict">
+            <span class="result-card__icon" aria-hidden="true"></span>
+            <h2 id="result-label">—</h2>
+        </div>
+        <p class="result-card__message" id="result-message"></p>
+        <dl class="result-card__facts">
+            <div><dt>Probabilidade estimada</dt><dd class="mono" id="result-confidence">—</dd></div>
+            <div><dt>Modelo</dt><dd class="mono" id="result-model">—</dd></div>
+        </dl>
+        <div class="rgb-meter" id="result-rgb" aria-label="RGB médio da imagem"></div>
+        <p class="result-card__warning">Classificação baseada somente na aparência visual. Não determina potabilidade.</p>
+    </section>
+
+    <div class="xp-toast" id="xp-toast" role="status" hidden></div>
+    <div class="xp-fade" id="xp-fade" aria-hidden="true"></div>
 </section>
+
+<dialog class="sheet" id="analysis-dialog" aria-labelledby="sheet-title">
+    <form method="dialog" class="sheet__close"><button class="icon-btn icon-btn--light" aria-label="Fechar análise"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></form>
+    <p class="kicker">Execução real · API /api/v1/predictions</p>
+    <h2 id="sheet-title">Como o agente chegou a esta decisão</h2>
+    <ol class="flow" id="sheet-flow" aria-label="Pipeline executado"></ol>
+    <div class="sheet__grid">
+        <section class="card">
+            <h3>Imagem analisada</h3>
+            <img class="sheet__image" id="sheet-image" alt="Imagem enviada ao modelo">
+            <p class="muted" id="sheet-image-meta">—</p>
+        </section>
+        <section class="card">
+            <h3>Histograma RGB</h3>
+            <p class="muted">Distribuição real dos 256 níveis por canal (agrupados em 32 faixas), extraída pelo servidor.</p>
+            <svg class="histogram" id="sheet-histogram" viewBox="0 0 320 140" role="img" aria-label="Histograma RGB da imagem analisada"></svg>
+            <div class="rgb-meter" id="sheet-rgb"></div>
+        </section>
+        <section class="card">
+            <h3>Resultado do modelo</h3>
+            <dl class="facts" id="sheet-facts"></dl>
+            <div class="prob" id="sheet-probabilities"></div>
+        </section>
+        <section class="card">
+            <h3>Modelo em produção</h3>
+            <dl class="facts" id="sheet-model"></dl>
+            <a class="link-arrow" href="{{ url_for('web.experiment') }}">Métricas completas e etapas KDD</a>
+        </section>
+    </div>
+    <p class="result-card__warning">Classificação baseada somente na aparência visual. Não determina potabilidade.</p>
+</dialog>
 {% endblock %}
-{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/demo3d.js') }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/experience/main.js') }}"></script>{% endblock %}

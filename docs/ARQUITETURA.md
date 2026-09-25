@@ -71,22 +71,43 @@ sequenceDiagram
     A-->>C: JSON + aviso visual
 ```
 
-## Agente 3D
+## Agente 3D (Water Vision)
 
 ```mermaid
 stateDiagram-v2
     [*] --> Ocioso
-    Ocioso --> Movendo: iniciar
-    Movendo --> Enchendo: chega à pia
-    Enchendo --> Observando: copo cheio
-    Observando --> Analisando: captura WebGL
-    Analisando --> Entregando: API retorna limpo
-    Analisando --> Alertando: API retorna sujo
-    Entregando --> Ocioso
-    Alertando --> Ocioso
+    Ocioso --> Solicitação: "Pegue um copo de água"
+    Solicitação --> IndoAoCopo
+    IndoAoCopo --> PegandoCopo
+    PegandoCopo --> IndoÀPia
+    IndoÀPia --> AbrindoTorneira
+    AbrindoTorneira --> Enchendo
+    Enchendo --> FechandoTorneira: nível ≥ 84%
+    FechandoTorneira --> EstaçãoDeVisão
+    EstaçãoDeVisão --> Captura: copo pousado no backlight
+    Captura --> Classificação: PNG 512×512 → POST /api/v1/predictions
+    Classificação --> Entregando: API retorna limpo
+    Classificação --> Alerta: API retorna sujo
+    Entregando --> Ocioso: nova solicitação
+    Alerta --> Ocioso: nova solicitação
 ```
 
-O seletor de aparência nunca envia o rótulo esperado. Ele altera o material da água; a cena é renderizada para PNG e a API decide com o mesmo modelo usado no upload clássico. Também é possível enviar uma fotografia própria no fluxo do agente.
+Módulos em `static/js/experience/` (ES modules nativos, carregados só após "Iniciar experiência"):
+
+| Módulo | Responsabilidade |
+|---|---|
+| `main.js` | interface (intro, carregamento por etapas reais, HUD, assistente, análise, resultado, diálogo) e chamada à API |
+| `world.js` | renderer, qualidade adaptativa (baixa/média/alta/auto por dispositivo e FPS), loop e captura |
+| `director.js` | máquina de estados da tarefa; sincroniza robô, câmera, torneira e interface |
+| `robot.js` | robô, IK analítico de dois segmentos, olhar, piscar, gestos e status |
+| `kitchen.js` / `environment.js` / `textures.js` | cozinha em metros, IBL procedural e texturas geradas |
+| `glass.js` / `stream.js` | copo, água com transmissão física, fluxo com gravidade, respingos e bolhas |
+| `camera.js` | planos cinematográficos amortecidos e modo livre (órbita por mouse, toque e teclado) |
+| `anim.js` / `audio.js` | tweens no relógio da cena (aceleráveis) e áudio sintetizado opcional |
+
+**Separação entre aparência e decisão.** O seletor "Água da torneira" altera apenas o material renderizado. A câmera fixa da estação de visão (fundo com backlight, como em inspeção de líquidos) renderiza sempre 512×512 com pixel ratio 1 — independentemente da qualidade gráfica — e o PNG segue para o mesmo endpoint do upload. Nenhum rótulo é enviado. O modo "Minha foto" envia a fotografia do usuário no lugar da captura.
+
+**Limitação observada do modelo atual.** Para imagens distantes do conjunto de treino, o SVM RBF devolve praticamente a mesma saída (a similaridade de kernel com todos os vetores de suporte é ≈ 0, restando o intercepto: ~72% "limpo"). Isso ocorre com as capturas 3D (limpa e turva) e também com fotos reais fora do treino. A demonstração mostra esse resultado honestamente; para o cenário de alerta use o modo "Minha foto" com uma imagem que o modelo reconhece como suja (ex.: `sujo19.jpg`).
 
 ## Organização
 
@@ -107,6 +128,6 @@ flowchart TB
 
 - O domínio continua sendo RGB tradicional; não foi introduzida CNN nem serviço externo.
 - O schema de atributos e o hash do dataset ficam junto do modelo para detectar divergências.
-- Three.js está versionado localmente para funcionar com CSP estrita e sem CDN.
+- Three.js, addons, fontes e texturas são locais ou procedurais para funcionar com CSP estrita e sem CDN (ver `docs/ASSETS.md`).
 - O modelo serializado com Joblib deve ser tratado como executável confiável; o serviço nunca aceita modelos enviados pelo cliente.
 - A aplicação não mantém sessão, conta ou banco de dados. Uploads são processados em memória e não são persistidos.

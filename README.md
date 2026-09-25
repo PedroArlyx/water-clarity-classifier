@@ -45,7 +45,7 @@ python -m scripts.run
 Acesse `http://127.0.0.1:5000`. As páginas disponíveis são:
 
 - `/` — upload clássico;
-- `/demonstracao` — cozinha 3D e agente reativo;
+- `/demonstracao` — **Water Vision**: cozinha 3D em que o robô coleta a água, fotografa o copo numa estação de visão e consulta a API (modos Demonstração/Livre, qualidade Auto/Alta/Média/Baixa);
 - `/experimento` — métricas e artefatos do treinamento;
 - `/api/v1/health` — estado do serviço e do modelo.
 
@@ -124,7 +124,7 @@ O `render.yaml` instala as dependências fixadas, inicia `gunicorn`, configura p
 water_clarity/          factory Flask, rotas, validação e serviço de ML
 scripts/                importação, auditoria, preparação, avaliação e execução
 templates/              upload, demonstração 3D, dashboard e erros
-static/                 CSS, JavaScript e Three.js local
+static/                 design system (CSS), fontes locais, JS da cena 3D (js/experience) e Three.js local
 tests/                  testes unitários e de integração
 data/                   imagens brutas, catálogo, licenças e relatórios
 model/                  pipeline final, schema e metadados
@@ -139,6 +139,8 @@ docs/                   arquitetura, API, dados, segurança e relatório
 - [API](docs/API.md)
 - [Revisão de segurança](docs/SEGURANCA.md)
 - [Atendimento aos requisitos](docs/ATENDIMENTO_ATIVIDADE.md)
+- [Assets, fontes e licenças visuais](docs/ASSETS.md)
+- [Design system](design-system/water-clarity-lab/MASTER.md)
 
 ## Limitações conhecidas
 
@@ -146,8 +148,8 @@ docs/                   arquitetura, API, dados, segurança e relatório
 - A base é pequena, desbalanceada e não representa condições variadas de iluminação, recipiente, câmera e tipos de contaminação.
 - Fotografias semelhantes podem induzir vazamento entre folds; o catálogo novo possui `group_id`, mas a base legada não.
 - Transparência ou cor não revela contaminantes invisíveis. O domínio do sistema é classificação visual binária, não potabilidade.
-- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado.
+- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado. Causa medida: para imagens fora do treino, a similaridade do kernel RBF com todos os vetores de suporte é ≈ 0 e o SVM devolve a saída do intercepto (~72% `limpo`), o que também ocorre com fotos reais novas.
 
 ## Licenças e terceiros
 
-As imagens externas mantêm URL, autor e licença no catálogo. Three.js 0.186.1 é distribuído sob MIT; o aviso está em `static/vendor/THREE-LICENSE.txt`. Consulte [docs/DADOS.md](docs/DADOS.md) antes de redistribuir o dataset.
+As imagens externas mantêm URL, autor e licença no catálogo. Three.js 0.186.1 é distribuído sob MIT; o aviso está em `static/vendor/THREE-LICENSE.txt`. Fontes Inter e JetBrains Mono (SIL OFL 1.1) e demais assets estão em [docs/ASSETS.md](docs/ASSETS.md). Consulte [docs/DADOS.md](docs/DADOS.md) antes de redistribuir o dataset.

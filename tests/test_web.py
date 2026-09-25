@@ -7,7 +7,7 @@ import pytest
     ("path", "marker"),
     [
         ("/", "Modo clássico"),
-        ("/demonstracao", "Cozinha interativa"),
+        ("/demonstracao", "Water Vision"),
         ("/experimento", "Etapas KDD implementadas"),
     ],
 )
@@ -41,4 +41,32 @@ def test_unknown_page_uses_friendly_error(client):
     ],
 )
 def test_dashboard_and_3d_artifacts_are_served(client, path):
+    assert client.get(path).status_code == 200
+
+
+def test_experiment_dashboard_uses_saved_metrics(client):
+    import csv
+
+    from water_clarity.settings import RESULTS_PATH
+
+    html = client.get("/experimento").get_data(as_text=True)
+    # Números lidos do CSV real de avaliação, não constantes do template.
+    with RESULTS_PATH.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for row in rows:
+        assert row["modelo"] in html
+        assert f"{float(row['f1_macro']):.3f}" in html
+    assert 'data-level="' in html  # matriz de confusão renderizada
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/static/js/experience/main.js",
+        "/static/js/experience/world.js",
+        "/static/vendor/addons/RoundedBoxGeometry.js",
+        "/static/fonts/inter-var-latin.woff2",
+    ],
+)
+def test_experience_assets_are_served(client, path):
     assert client.get(path).status_code == 200

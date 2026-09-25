@@ -1,227 +1,88 @@
-# Design System Master File
+# Water Clarity Lab — Design System
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+Fonte única de verdade: tokens em `static/style.css` (bloco `:root`). Este documento explica **quando** usar cada token. Se uma página precisar de algo que não existe aqui, crie o token primeiro — não use valores soltos.
 
----
+## Direção de arte
 
-**Project:** Water Clarity Lab
-**Generated:** 2026-09-24 17:09:20
-**Category:** LMS (Learning Management System)
-**Design Dials:** Variance 6/10 (Balanced / Modern) | Motion 5/10 (Standard) | Density 6/10 (Standard)
+**Cozinha contemporânea inteligente.** Neutros quentes (papel, pedra, grafite, carvalho, vidro). A tecnologia aparece de forma discreta. Cor saturada só comunica **estado** (limpa/suja, ativo) ou **dado** (canais RGB, séries de gráfico). Sem neon, sem gradientes decorativos, sem azul em tudo.
 
----
+## Temas
 
-## Global Rules
+| Contexto | Tema | Onde |
+|---|---|---|
+| Leitura acadêmica, upload, dashboard | claro (`:root`) | `/`, `/experimento`, diálogo "Ver análise" |
+| Experiência 3D | escuro (`.page-demo`) — mesmos papéis, outros valores | `/demonstracao` |
 
-### Color Palette
+Os componentes usam **papéis** (`--surface`, `--text-2`, `--border`…), nunca hex direto, para funcionar nos dois temas.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#0284C7` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#06B6D4` | `--color-secondary` |
-| Accent/CTA | `#0891B2` | `--color-accent` |
-| Background | `#F0F9FF` | `--color-background` |
-| Foreground | `#0F172A` | `--color-foreground` |
-| Muted | `#EFF7FB` | `--color-muted` |
-| Border | `#E0F0F8` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#0284C7` | `--color-ring` |
+## Tipografia
 
-**Color Notes:** Refreshing blue + water cyan
+| Token | Valor | Uso |
+|---|---|---|
+| `--font-sans` | Inter (variável, local) | todo o texto |
+| `--font-mono` | JetBrains Mono (variável, local) | números, métricas, RGB, nomes de estimadores |
+| `--text-xs` … `--text-2xl` | 12 → 28 px | rótulos → títulos de seção |
+| `--text-3xl` | 32 → 44 px fluido | título do resultado |
+| `--text-display` | 40 → 68 px fluido | um título por página |
 
-### Typography
+Regras: títulos com peso 600–620 e `letter-spacing` negativo; rótulos pequenos em caixa alta usam `.kicker`; números em colunas sempre `tabular-nums`.
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
+## Cor
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
+| Papel | Claro | Escuro | Uso |
+|---|---|---|---|
+| `--bg` | `#f6f5f2` | `#0e0f10` | fundo da página |
+| `--surface` | `#ffffff` | `#17181a` | cartões |
+| `--text` / `--text-2` / `--text-3` | `#1a1918` / `#5b5750` / `#7b766e` | `#f3f2ef` / `#bdbab4` / `#8f8b85` | primário / secundário / terciário |
+| `--accent` | `#2a78d6` | `#6ea6ef` | foco, etapa ativa, vencedor no gráfico |
+| `--clean` (+ `-soft`, `-line`) | `#1f7a57` | `#5fc896` | classificação **limpa** |
+| `--dirty` (+ `-soft`, `-line`) | `#9a5b00` | `#f0b25a` | classificação **suja** — âmbar, nunca a tela inteira vermelha |
+| `--ch-r` / `--ch-g` / `--ch-b` | `#ef7a55` / `#1a6b40` / `#3b74d6` | `#df6d4a` / `#1d7043` / `#4f86e8` | canais RGB em barras e histogramas |
 
-### Spacing Variables
+Os canais RGB foram validados para daltonismo (ΔE CVD ≥ 8 entre pares adjacentes, claro e escuro) com o validador da skill de dataviz. O vermelho tem contraste < 3:1 no fundo claro; por isso **rótulos R/G/B e valores numéricos são sempre visíveis**.
 
-*Density: 6/10 — Standard*
+**Estado nunca depende só de cor:** o selo `.verdict` e o `.result-card` combinam ícone (✓ / !), palavra ("Limpa"/"Suja") e cor.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+## Espaço, raio, sombra, movimento
 
-### Shadow Depths
+- Espaço: `--space-1..10` = 4, 8, 12, 16, 20, 24, 32, 40, 56, 80 px.
+- Raio: `--radius-xs` 6 (células), `-sm` 10 (botões, campos), `-md` 14 (blocos internos), `-lg` 20 (cartões, painéis), `-pill`.
+- Sombra: `--shadow-1` (cartões em repouso), `-2` (elevado), `-3` (diálogo).
+- Movimento: `--dur-1` 120 ms (press), `-2` 200 ms (hover), `-3` 360 ms (entrada de painel), `-4` 700 ms (barras de dado). Curva padrão `--ease-out`. `prefers-reduced-motion` zera animações CSS; na cena 3D, a câmera corta em vez de deslizar e a "respiração" é desligada.
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+## Componentes
 
----
+| Classe | Descrição |
+|---|---|
+| `.btn` + `--primary` / `--secondary` / `--light` / `--ghost-dark`, tamanhos `--sm` / `--lg`, `--block` | botões; alvo mínimo 36–52 px |
+| `.icon-btn` | botão quadrado 40 px com ícone (som); usa `aria-pressed` |
+| `.segmented` (+ `--dark`, `--wrap`) | grupo de rádio (`role="radiogroup"`, setas do teclado) |
+| `.select` (+ `--dark`) | select nativo estilizado |
+| `.card`, `.glass` | superfície clara / painel translúcido sobre o 3D (usar com moderação) |
+| `.kicker` | rótulo pequeno em caixa alta |
+| `.notice` | aviso informativo (ícone âmbar) |
+| `.verdict--clean` / `--dirty` | selo de classificação com ícone |
+| `.facts` | lista rótulo → valor (valor em mono) |
+| `.rgb-meter` | barras R/G/B com valor e amostra da cor média |
+| `.histogram` | histograma RGB em SVG (linhas 1,6 px + área 10%) |
+| `.prob` | probabilidades por classe (classe prevista em destaque) |
+| `.flow` | pipeline horizontal (imagem → … → resultado) |
+| `.kpi` (+ `--hero`) | números-resumo; um único `--hero` por página |
+| `.chart` | barras horizontais SVG: ≤ 18 px, ponta arredondada 4 px, grade 1 px recessiva, haste de desvio-padrão |
+| `.cm` | matriz de confusão em rampa sequencial azul (5 níveis) |
+| `.data-table` | tabela de métricas (alternativa acessível aos gráficos) |
 
-## Component Specs
+## Experiência 3D — camadas de interface
 
-### Buttons
+| Camada | Posição (desktop) | Mobile |
+|---|---|---|
+| Barra (câmera, qualidade, som) | topo direito | largura total |
+| HUD (estado, modelo, pipeline) | direita, abaixo da barra | linha compacta; pipeline oculto (o painel de análise mostra as etapas) |
+| Assistente (pedido e aparência simulada) | base esquerda | base, largura total |
+| Análise / Resultado | base direita | base, largura total, rolável |
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #0891B2;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+Regra de ouro: **o copo e o robô ficam no terço central/superior** de cada plano de câmera; painéis ocupam as bordas inferiores.
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
+## Dados exibidos
 
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #0284C7;
-  border: 2px solid #0284C7;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F0F9FF;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #0284C7;
-  outline: none;
-  box-shadow: 0 0 0 3px #0284C720;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Soft UI Evolution
-
-**Keywords:** Evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid
-
-**Best For:** Modern enterprise apps, SaaS platforms, health/wellness, modern business tools, professional, hybrid
-
-**Key Effects:** Improved shadows (softer than flat, clearer than neumorphism), modern (200-300ms), focus visible, WCAG AA/AAA
-
-### Page Pattern
-
-**Pattern Name:** Immersive/Interactive Experience
-
-- **Conversion Strategy:** 40% higher engagement. Performance trade-off. Provide skip option. Mobile fallback essential.
-- **CTA Placement:** After interaction complete + Skip option for impatient users
-- **Section Order:** 1. Full-screen interactive element, 2. Guided product tour, 3. Key benefits revealed, 4. CTA after completion
-
----
-
-## Motion
-
-**Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
-
-```js
-gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger: { each: 0.06, from: 'start', grid: 'auto' }, ease: 'back.out(1.4)' });
-```
-
-**Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger
-
-- ✅ Combine with from: 'center' for a bento-grid layout to draw the eye inward first
-- ❌ Don't use back.out on dense data tables; the overshoot reads as sloppy on informational UI
-- ⚡ Group DOM writes; avoid interleaving layout reads (getBoundingClientRect) between staggered tweens
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Flat design without depth
-- ❌ Text-heavy pages
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+Todo número exibido como resultado vem da API ou dos artefatos (`metadata.json`, `resultados_avaliacao.csv`). Se um valor não existir, a interface mostra "—" ou "não disponível"; nunca um valor ilustrativo. Nome do algoritmo nunca é fixo no frontend.

@@ -12,16 +12,35 @@ curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@sujo19.jpg"
 
 ```json
 {
-  "prediction": {
+  "data": {
     "classification": "sujo",
     "confidence": 0.9457,
-    "image": {"format": "JPEG", "height": 4160, "width": 3120},
-    "mean_rgb": {"b": 75.21, "g": 91.33, "r": 103.84},
+    "probabilities": {"limpo": 0.0543, "sujo": 0.9457},
     "model": "SVM",
+    "pipeline": [
+      {"name": "scaler", "estimator": "StandardScaler"},
+      {"name": "classifier", "estimator": "SVC"}
+    ],
+    "features": {
+      "mean_rgb": [115.21, 130.4, 127.33],
+      "histogram": {"r": [0.0, "... 32 faixas"], "g": ["..."], "b": ["..."]},
+      "count": 794,
+      "histogram_count": 768,
+      "engineered_count": 26,
+      "schema_version": "rgb-histogram-stats-v2"
+    },
+    "image": {"format": "JPEG", "height": 3000, "width": 4000, "mime_type": "image/jpeg"},
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
   }
 }
 ```
+
+Campos adicionados na etapa visual (aditivos, sem quebrar clientes):
+
+- `features.histogram` — os 256 bins normalizados de cada canal, **extraídos pelo servidor**, agrupados em 32 faixas (cada faixa é a soma de 8 bins; cada canal soma 1). Usado no histograma da interface.
+- `features.count`, `histogram_count`, `engineered_count`, `schema_version` — tamanho real do vetor enviado ao modelo.
+- `pipeline` — etapas reais do `sklearn.Pipeline` carregado (ex.: normalização + classificador). Nenhum nome de algoritmo é fixo no frontend.
+- `probabilities` — `predict_proba` por classe, na ordem de `classes_` do pipeline.
 
 A confiança é a maior probabilidade estimada pelo classificador. Ela não é uma medida de potabilidade e não representa calibração clínica ou laboratorial.
 
