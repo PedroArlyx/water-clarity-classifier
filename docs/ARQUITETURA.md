@@ -7,8 +7,8 @@ flowchart LR
     U[Usuário] --> UI[Upload clássico ou cozinha 3D]
     UI --> API[Flask /api/v1/predictions]
     API --> V[Validação segura da imagem]
-    V --> F[Cor do centro da foto: 19 atributos]
-    F --> M[modelo_agua.pkl carregado uma vez]
+    V --> F[Histograma RGB: 768 valores, formato do res.csv]
+    F --> M[modelo_agua.pkl: formato da cor → 0 a 1 → Naive Bayes]
     M --> R[Classe, confiança e aviso]
     META[metadata.json] --> DASH[Dashboard experimental]
     CSV[resultados_avaliacao.csv] --> DASH
@@ -20,27 +20,27 @@ A factory `water_clarity.create_app` registra dois blueprints: `web`, responsáv
 
 ```mermaid
 flowchart TD
-    B[Imagens catalogadas em data/metadata/images.csv] --> C{Revisão aprovada?}
-    C -- sim --> D[Conferência de hash]
-    C -- não --> X[Excluída ou pendente]
-    D --> F[Recorte de 50% do centro]
-    F --> G[19 estatísticas de saturação, brilho e cromaticidade]
-    G --> J[Mineração e interpretação]
+    A[res.csv: 50 fotos, 768 atributos RGB] --> F[Limpeza: nulos e duplicatas]
+    F --> T1[Cenário A: histograma bruto como proporção]
+    F --> T2[Cenário B: formato da cor, 78 atributos sem brilho]
+    T1 & T2 --> N[MinMaxScaler 0 a 1 dentro do pipeline]
+    N --> J[Mineração e interpretação]
 ```
 
 ## Treinamento e seleção
 
 ```mermaid
 flowchart TD
-    X[Imagens aprovadas] --> CV[StratifiedGroupKFold 5x por sessão/fonte, seed 42]
-    CV --> P[StandardScaler → LogisticRegression balanceada]
-    X --> LOSO[Cada sessão de fotos próprias fora uma vez]
-    P --> OOF[Predições out-of-fold e matriz]
-    P --> FINAL[Modelo treinado em 100%]
+    X[res.csv] --> CV[RepeatedStratifiedKFold 5×10, seed 42]
+    CV --> M16[8 algoritmos × 2 cenários = 16 modelos]
+    M16 --> PROF[Teste nas 8 fotos do professor e 7 extras]
+    PROF --> SEL[Maior F1-macro entre os que acertam ≥ 6/8 do professor]
+    SEL --> OOF[Predições out-of-fold e matriz do vencedor]
+    SEL --> FINAL[Vencedor treinado com as 50 fotos]
     FINAL --> ART[modelo_agua.pkl]
 ```
 
-`train_model.py` treina apenas o `modelo_agua`. A avaliação nunca mede o modelo final já ajustado em todas as linhas.
+A avaliação nunca mede o modelo final já ajustado em todas as linhas, e as fotos de teste (`data/teste/`) nunca entram no treino.
 
 ## Fluxo de inferência
 
@@ -55,7 +55,7 @@ sequenceDiagram
     A->>V: bytes, nome, MIME
     V-->>A: RGB sanitizado
     A->>F: imagem RGB
-    F-->>A: 19 atributos do centro (+ histograma só para a interface)
+    F-->>A: histograma de 768 valores (o pipeline aplica o formato da cor)
     A->>M: predict + predict_proba
     M-->>A: classe e confiança
     A-->>C: JSON + aviso visual
@@ -97,7 +97,7 @@ Módulos em `static/js/experience/` (ES modules nativos, carregados só após "I
 
 **Separação entre aparência e decisão.** O seletor "Água da torneira" altera apenas o material renderizado. A câmera fixa da estação de visão (fundo com backlight, como em inspeção de líquidos) renderiza sempre 512×512 com pixel ratio 1 — independentemente da qualidade gráfica — e o PNG segue para o mesmo endpoint do upload. Nenhum rótulo é enviado. O modo "Minha foto" envia a fotografia do usuário no lugar da captura.
 
-**Limitação observada do modelo atual.** O modelo olha a cor do centro da foto; ele ainda confunde água suja clara ou leitosa com limpa e depende de o copo estar no centro do enquadramento. A demonstração mostra o resultado real; para o cenário de alerta use o modo "Minha foto" com uma imagem claramente suja (ex.: `data/raw/proprias/sujo/sujo19.jpg`).
+**Limitação observada do modelo atual.** O Naive Bayes com formato da cor separa água colorida de água transparente, mas confunde água suja pouco colorida (leitosa, quase branca, como `sujo2`) com limpa, e mostra probabilidades perto de 100%. O fundo ocupa a maior parte da foto. A demonstração mostra o resultado real; para o cenário de alerta use o modo "Minha foto" com `data/teste/professor/sujo/sujo19.jpg`.
 
 ## Organização
 

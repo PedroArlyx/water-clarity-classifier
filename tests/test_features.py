@@ -54,11 +54,28 @@ def test_excessive_dimensions_are_rejected():
 
 
 
-def test_center_color_features_ignore_the_border():
-    from water_clarity.ml.features import CENTER_COLOR_FEATURES, center_color_features
 
-    image = Image.new("RGB", (100, 100), color=(200, 30, 30))  # borda vermelha saturada
-    image.paste((240, 240, 240), (25, 25, 75, 75))  # centro neutro, como água limpa
-    features = center_color_features(image)
-    assert features.shape == (len(CENTER_COLOR_FEATURES),)
-    assert features[CENTER_COLOR_FEATURES.index("sat_mean")] == pytest.approx(0.0, abs=0.01)
+def test_color_shape_separates_neutral_from_colored_water():
+    from water_clarity.ml.features import COLOR_SHAPE_FEATURES, color_shape_features
+
+    rng = np.random.default_rng(0)
+    neutral = rng.integers(90, 170, size=(60, 60, 1)).repeat(3, axis=2).astype(np.uint8)  # R = G = B
+    tinted = neutral.copy()
+    tinted[20:40, 20:40, 2] = 230  # "morro" só no azul, como água colorida
+    shapes = color_shape_features(
+        np.vstack([Image.fromarray(img).histogram() for img in (neutral, tinted)])
+    )
+    assert shapes.shape == (2, len(COLOR_SHAPE_FEATURES)) == (2, 78)
+    assert np.abs(shapes[0, :75]).max() < 1e-9
+    assert np.abs(shapes[1, :75]).mean() > 0.05
+
+
+def test_color_shape_does_not_depend_on_image_size():
+    from water_clarity.ml.features import color_shape_features
+
+    small = Image.new("RGB", (10, 10), color=(30, 90, 160))
+    large = small.resize((100, 100), Image.NEAREST)
+    assert np.allclose(
+        color_shape_features(np.array([small.histogram()])),
+        color_shape_features(np.array([large.histogram()])),
+    )

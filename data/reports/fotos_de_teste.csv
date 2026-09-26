@@ -1,0 +1,16 @@
+arquivo,conjunto,classe,previsto
+data/teste/professor/limpo/limpo2.jpg,professor,limpo,limpo
+data/teste/professor/sujo/sujo19.jpg,professor,sujo,sujo
+data/teste/whatsapp/limpo/whatsapp-2026-09-25-14h49m38.jpeg,extra,limpo,limpo
+data/teste/whatsapp/limpo/whatsapp-2026-09-25-14h50m09.jpeg,extra,limpo,limpo
+data/teste/whatsapp/sujo/whatsapp-2026-09-25-14h53m51.jpeg,extra,sujo,limpo
+data/teste/whatsapp/sujo/whatsapp-2026-09-25-14h53m58.jpeg,extra,sujo,limpo
+data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m46.jpeg,extra,sujo,sujo
+data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m53.jpeg,extra,sujo,sujo
+data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m59.jpeg,extra,sujo,sujo
+data/teste/professor/limpo/limpo14.jpg,professor,limpo,limpo
+data/teste/professor/limpo/limpo20.jpg,professor,limpo,limpo
+data/teste/professor/sujo/sujo2.jpg,professor,sujo,limpo
+data/teste/professor/sujo/sujo9.jpg,professor,sujo,sujo
+data/teste/professor/sujo/sujo12.jpg,professor,sujo,sujo
+data/teste/professor/sujo/sujo18.jpg,professor,sujo,sujo

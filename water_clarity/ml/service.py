@@ -13,10 +13,9 @@ import pandas as pd
 
 from water_clarity.errors import ModelUnavailableError
 from water_clarity.ml.features import (
-    CENTER_FRACTION,
     CHANNELS,
     FEATURE_SCHEMA_VERSION,
-    center_color_features,
+    HISTOGRAM_FEATURES,
     extract_features_from_image,
     read_limited,
     validate_image_bytes,
@@ -104,7 +103,7 @@ class ModelService:
                     if (
                         not isinstance(loaded, dict)
                         or not required.issubset(loaded)
-                        or loaded.get("extrator") != "cor_do_centro"
+                        or loaded.get("entrada") != FEATURE_SCHEMA_VERSION
                     ):
                         raise ModelUnavailableError(
                             "O artefato do modelo possui formato incompatível. Execute 'python train_model.py'."
@@ -137,8 +136,8 @@ class ModelService:
         features, mean_rgb = extract_features_from_image(image)
         bundle = self.bundle()
         columns = list(bundle["colunas"])
-        fraction = float(bundle.get("fracao_centro", CENTER_FRACTION))
-        vector = pd.DataFrame([center_color_features(image, fraction)], columns=columns, dtype=float)
+        # mesmo formato do res.csv: 768 valores r0..r255, g0..g255, b0..b255
+        vector = pd.DataFrame([[features[name] for name in HISTOGRAM_FEATURES]], columns=columns, dtype=float)
         pipeline = bundle["modelo"]
         label = str(pipeline.predict(vector)[0])
 
@@ -165,7 +164,8 @@ class ModelService:
             histogram=_histogram_bins(features),
             feature_summary={
                 "count": len(columns),
-                "center_fraction": fraction,
+                "model_feature_count": int(bundle.get("n_atributos", len(columns))),
+                "transformation": str(bundle.get("atributos", "")),
                 "schema_version": FEATURE_SCHEMA_VERSION,
             },
             pipeline=_pipeline_steps(pipeline),

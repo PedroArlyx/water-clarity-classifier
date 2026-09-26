@@ -7,7 +7,7 @@ Prefixo atual: `/api/v1`. Todas as falhas da API seguem `{"error":{"code":"...",
 Recebe `multipart/form-data` com o campo obrigatório `image`. Formatos aceitos: PNG, JPEG, WebP e BMP. Limites: 16 MB no corpo, 24 megapixels e 10 partes de formulário.
 
 ```bash
-curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/proprias/sujo/sujo19.jpg"
+curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/teste/professor/sujo/sujo19.jpg"
 ```
 
 ```json
@@ -16,17 +16,19 @@ curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/propri
     "classification": "sujo",
     "confidence": 1.0,
     "probabilities": {"limpo": 0.0, "sujo": 1.0},
-    "model": "Regressão logística",
+    "model": "Naive Bayes · formato da cor",
     "pipeline": [
-      {"name": "padronizar", "estimator": "StandardScaler"},
-      {"name": "modelo", "estimator": "LogisticRegression"}
+      {"name": "formato", "estimator": "ColorShapeTransformer"},
+      {"name": "normalizar_0_1", "estimator": "MinMaxScaler"},
+      {"name": "modelo", "estimator": "GaussianNB"}
     ],
     "features": {
       "mean_rgb": [115.21, 130.4, 127.33],
       "histogram": {"r": [0.0, "... 32 faixas"], "g": ["..."], "b": ["..."]},
-      "count": 19,
-      "center_fraction": 0.5,
-      "schema_version": "cor-do-centro-v1"
+      "count": 768,
+      "model_feature_count": 78,
+      "transformation": "formato da cor",
+      "schema_version": "rgb-histogram-768"
     },
     "image": {"format": "JPEG", "height": 3000, "width": 4000, "mime_type": "image/jpeg"},
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
@@ -36,8 +38,8 @@ curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/propri
 
 Campos adicionados na etapa visual (aditivos, sem quebrar clientes):
 
-- `features.histogram` — os 256 bins normalizados de cada canal da foto inteira, **extraídos pelo servidor**, agrupados em 32 faixas (cada faixa é a soma de 8 bins; cada canal soma 1). Só para o gráfico da interface; o modelo usa a cor do centro.
-- `features.count`, `center_fraction`, `schema_version` — tamanho do vetor enviado ao modelo (atributos de cor do centro) e fração recortada.
+- `features.histogram` — os 256 bins normalizados de cada canal da foto inteira, **extraídos pelo servidor**, agrupados em 32 faixas (cada faixa é a soma de 8 bins; cada canal soma 1). É o mesmo histograma enviado ao modelo.
+- `features.count`, `model_feature_count`, `transformation`, `schema_version` — 768 valores enviados ao pipeline, que os transforma em 78 atributos de formato da cor.
 - `pipeline` — etapas reais do `sklearn.Pipeline` carregado (ex.: normalização + classificador). Nenhum nome de algoritmo é fixo no frontend.
 - `probabilities` — `predict_proba` por classe, na ordem de `classes_` do pipeline.
 

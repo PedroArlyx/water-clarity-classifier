@@ -1,120 +1,194 @@
 {
   "artifact_format": "modelo_agua",
   "cross_validation": {
-    "groups": "group_id do catálogo (sessão de fotos ou página do Commons)",
+    "n_repeats": 10,
     "n_splits": 5,
     "selection_metric": "f1_macro",
     "shuffle": true,
-    "strategy": "StratifiedGroupKFold"
+    "strategy": "RepeatedStratifiedKFold"
   },
   "dataset": {
     "class_distribution": {
-      "limpo": 36,
-      "sujo": 15
+      "limpo": 14,
+      "sujo": 36
     },
-    "commons_photos": 36,
-    "own_photos": 15,
-    "path": "data/metadata/images.csv",
-    "samples": 51,
-    "sha256": "605cefe885e18564004c8fbad007dcd01d528ef0cef52fdb66c49d7a7b78b2e5"
+    "path": "res.csv",
+    "samples": 50,
+    "sha256": "2639238a463b61909fb3115a0026517a3a3f2e825503feaf0d33a8d33935ae10"
   },
   "evaluation": {
     "classification_report": {
-      "accuracy": 0.6862745098039216,
+      "accuracy": 0.88,
       "limpo": {
-        "f1-score": 0.7777777777777778,
-        "precision": 0.7777777777777778,
-        "recall": 0.7777777777777778,
-        "support": 36.0
+        "f1-score": 0.8125,
+        "precision": 0.7222222222222222,
+        "recall": 0.9285714285714286,
+        "support": 14.0
       },
       "macro avg": {
-        "f1-score": 0.6222222222222222,
-        "precision": 0.6222222222222222,
-        "recall": 0.6222222222222222,
-        "support": 51.0
+        "f1-score": 0.8621323529411764,
+        "precision": 0.8454861111111112,
+        "recall": 0.8948412698412699,
+        "support": 50.0
       },
       "sujo": {
-        "f1-score": 0.4666666666666667,
-        "precision": 0.4666666666666667,
-        "recall": 0.4666666666666667,
-        "support": 15.0
+        "f1-score": 0.9117647058823529,
+        "precision": 0.96875,
+        "recall": 0.8611111111111112,
+        "support": 36.0
       },
       "weighted avg": {
-        "f1-score": 0.6862745098039216,
-        "precision": 0.6862745098039216,
-        "recall": 0.6862745098039216,
-        "support": 51.0
+        "f1-score": 0.8839705882352941,
+        "precision": 0.8997222222222223,
+        "recall": 0.88,
+        "support": 50.0
       }
     },
     "confusion_matrix": [
       [
-        28,
-        8
+        13,
+        1
       ],
       [
-        8,
-        7
+        5,
+        31
       ]
     ],
+    "extra_photos": {
+      "hits": 5,
+      "total": 7
+    },
     "labels": [
       "limpo",
       "sujo"
     ],
-    "unseen_own_photos": {
-      "limpo": {
-        "hits": 5,
-        "total": 5
-      },
-      "sujo": {
-        "hits": 7,
-        "total": 10
-      }
+    "professor_photos": {
+      "hits": 7,
+      "total": 8
     },
+    "test_predictions": [
+      {
+        "arquivo": "data/teste/professor/limpo/limpo2.jpg",
+        "classe": "limpo",
+        "conjunto": "professor",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/professor/sujo/sujo19.jpg",
+        "classe": "sujo",
+        "conjunto": "professor",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/limpo/whatsapp-2026-09-25-14h49m38.jpeg",
+        "classe": "limpo",
+        "conjunto": "extra",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/limpo/whatsapp-2026-09-25-14h50m09.jpeg",
+        "classe": "limpo",
+        "conjunto": "extra",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/sujo/whatsapp-2026-09-25-14h53m51.jpeg",
+        "classe": "sujo",
+        "conjunto": "extra",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/sujo/whatsapp-2026-09-25-14h53m58.jpeg",
+        "classe": "sujo",
+        "conjunto": "extra",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m46.jpeg",
+        "classe": "sujo",
+        "conjunto": "extra",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m53.jpeg",
+        "classe": "sujo",
+        "conjunto": "extra",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/whatsapp/sujo/whatsapp-2026-09-25-15h06m59.jpeg",
+        "classe": "sujo",
+        "conjunto": "extra",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/professor/limpo/limpo14.jpg",
+        "classe": "limpo",
+        "conjunto": "professor",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/professor/limpo/limpo20.jpg",
+        "classe": "limpo",
+        "conjunto": "professor",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/professor/sujo/sujo2.jpg",
+        "classe": "sujo",
+        "conjunto": "professor",
+        "previsto": "limpo"
+      },
+      {
+        "arquivo": "data/teste/professor/sujo/sujo9.jpg",
+        "classe": "sujo",
+        "conjunto": "professor",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/professor/sujo/sujo12.jpg",
+        "classe": "sujo",
+        "conjunto": "professor",
+        "previsto": "sujo"
+      },
+      {
+        "arquivo": "data/teste/professor/sujo/sujo18.jpg",
+        "classe": "sujo",
+        "conjunto": "professor",
+        "previsto": "sujo"
+      }
+    ],
     "winner_metrics": {
-      "accuracy": 0.691996891996892,
-      "balanced_accuracy": 0.6069444444444445,
-      "f1_macro": 0.58243894993895,
-      "f1_weighted": 0.673024198024198,
-      "precision_macro": 0.5834126984126985,
-      "recall_macro": 0.6069444444444445
+      "accuracy": 0.888,
+      "balanced_accuracy": 0.9017857142857144,
+      "f1_macro": 0.872746336996337,
+      "f1_weighted": 0.8923912087912087,
+      "precision_macro": 0.8742142857142856,
+      "precision_sujo": 0.9714285714285714,
+      "recall_macro": 0.9017857142857144,
+      "recall_sujo": 0.8735714285714284
     }
   },
   "feature_schema": {
-    "count": 19,
-    "features": [
-      "sat_p10",
-      "sat_p25",
-      "sat_p50",
-      "sat_p75",
-      "sat_p90",
-      "sat_mean",
-      "sat_std",
-      "val_p10",
-      "val_p50",
-      "val_p90",
-      "val_std",
-      "chroma_r",
-      "chroma_g",
-      "chroma_b",
-      "chroma_r_std",
-      "chroma_g_std",
-      "chroma_b_std",
-      "sat_above_025",
-      "sat_above_040"
-    ],
-    "version": "cor-do-centro-v1"
+    "baseline_rgb_histogram_count": 768,
+    "color_shape_count": 78,
+    "count": 768,
+    "version": "rgb-histogram-768"
   },
   "model_details": {
-    "feature_selection": "recorte central de 50% da largura e da altura",
+    "algorithm": "Naive Bayes",
+    "feature_selection": "formato da cor",
     "file": "modelo_agua.pkl",
-    "form": "Cor do centro da foto",
-    "k": 19,
+    "form": "formato da cor",
+    "k": 78,
     "pipeline": [
-      "padronizar",
+      "formato",
+      "normalizar_0_1",
       "modelo"
-    ]
+    ],
+    "selection_rule": "maior f1_macro na CV entre os modelos com pelo menos 6 de 8 fotos do professor corretas"
   },
-  "model_name": "Regressão logística",
+  "model_name": "Naive Bayes · formato da cor",
   "primary_metric": "f1_macro",
   "random_seed": 42,
   "runtime": {
@@ -130,6 +204,6 @@
     "platform": "Windows-11-10.0.26200-SP0",
     "python": "3.13.7"
   },
-  "trained_at": "2026-09-26T13:58:09.895968+00:00",
+  "trained_at": "2026-09-26T16:20:20.850642+00:00",
   "visual_only_warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
 }

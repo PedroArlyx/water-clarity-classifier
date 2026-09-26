@@ -15,17 +15,17 @@ FIELDS = (
 )
 
 DECISIONS = {
-    "2cfaa76e8e6671f4": ("approved", "Copo com água transparente em dispensador; conteúdo e rótulo revisados."),
-    "383b98837cc5156b": ("approved", "Copo transparente com água visualmente clara; conteúdo e rótulo revisados."),
-    "44d4bbffd201666a": ("approved", "Copo isolado com água visualmente clara; conteúdo e rótulo revisados."),
-    "47f2889f7d97eda9": ("approved", "Detalhe superior de copo com água visualmente clara; revisado."),
+    "2cfaa76e8e6671f4": ("reserva", "Copo com água transparente em dispensador; conteúdo e rótulo revisados."),
+    "383b98837cc5156b": ("reserva", "Copo transparente com água visualmente clara; conteúdo e rótulo revisados."),
+    "44d4bbffd201666a": ("reserva", "Copo isolado com água visualmente clara; conteúdo e rótulo revisados."),
+    "47f2889f7d97eda9": ("reserva", "Detalhe superior de copo com água visualmente clara; revisado."),
     "5068547b1b2abacd": ("rejected", "Rejeitada: mostra vidro/janela molhada, não um copo de água."),
-    "73b1743f7e7f14ba": ("approved", "Copo em ambiente interno com água visualmente clara; revisado."),
-    "9ff73eb407e42bc3": ("approved", "Torneira enchendo copo com água visualmente clara; revisado."),
-    "b1aeb848b1e93126": ("approved", "Copo ao ar livre com água visualmente clara; revisado."),
-    "ef5aded3626e303e": ("approved", "Copo em mesa externa com água visualmente clara; revisado."),
+    "73b1743f7e7f14ba": ("reserva", "Copo em ambiente interno com água visualmente clara; revisado."),
+    "9ff73eb407e42bc3": ("reserva", "Torneira enchendo copo com água visualmente clara; revisado."),
+    "b1aeb848b1e93126": ("reserva", "Copo ao ar livre com água visualmente clara; revisado."),
+    "ef5aded3626e303e": ("reserva", "Copo em mesa externa com água visualmente clara; revisado."),
     "f6efacd6b9266f7e": ("rejected", "Rejeitada como near-duplicate da imagem commons-b1aeb848b1e93126."),
-    "03e33b13ca1ba776": ("approved", "Amostra em recipiente com turbidez e tonalidade marrom evidentes; revisada."),
+    "03e33b13ca1ba776": ("reserva", "Amostra em recipiente com turbidez e tonalidade marrom evidentes; revisada."),
     "28187cf49023cc33": ("rejected", "Rejeitada: cena de rio/pessoa, domínio distante de copo ou amostra."),
     "4842ef915c474d98": ("rejected", "Rejeitada: dois frascos com aparências divergentes tornam o rótulo ambíguo."),
 }
@@ -45,8 +45,8 @@ def main() -> int:
 
     now = datetime.now(timezone.utc).isoformat()
     local_records = [
-        ("data/raw/proprias/limpo/limpo2.jpg", "limpo", "local-limpo-2020", "Foto local do projeto; conteúdo e rótulo revisados."),
-        ("data/raw/proprias/sujo/sujo19.jpg", "sujo", "local-sujo-2020", "Foto local do projeto; conteúdo e rótulo revisados."),
+        ("data/teste/professor/limpo/limpo2.jpg", "limpo", "local-limpo-2020", "Foto local do projeto; conteúdo e rótulo revisados."),
+        ("data/teste/professor/sujo/sujo19.jpg", "sujo", "local-sujo-2020", "Foto local do projeto; conteúdo e rótulo revisados."),
     ]
     known = {row["file"] for row in rows}
     for filename, label, group_id, notes in local_records:
@@ -64,7 +64,7 @@ def main() -> int:
                 "acquired_at": now,
                 "sha256": digest(path),
                 "group_id": group_id,
-                "review_status": "approved",
+                "review_status": "holdout",
                 "notes": notes,
             }
         )

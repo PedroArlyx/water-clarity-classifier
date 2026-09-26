@@ -14,7 +14,7 @@
 <div class="shell">
     <section class="kpis" aria-label="Resumo do experimento">
         <article class="kpi kpi--hero">
-            <small>Modelo</small>
+            <small>Modelo vencedor</small>
             <strong>{{ metadata.model_name|default('—') }}</strong>
             <span>{% if winner_row %}{{ primary|replace('_', ' ') }} {{ '%.3f'|format(winner_row[primary]|float) }}{% else %}maior {{ primary }}{% endif %}</span>
         </article>
@@ -36,7 +36,7 @@
         <article class="kpi">
             <small>Atributos</small>
             <strong>{{ metadata.model_details.k|default('—') }}</strong>
-            <span>de cor, no {{ metadata.model_details.feature_selection|default('centro da foto') }}</span>
+            <span>usados pelo modelo ({{ metadata.model_details.form|default('formato da cor') }})</span>
         </article>
     </section>
 
@@ -76,7 +76,7 @@
             {% else %}
             <p class="muted">Execute <code>python train_model.py</code> para gerar as métricas.</p>
             {% endfor %}
-            <p class="muted">Validação cruzada estratificada e agrupada por sessão/fonte, {{ metadata.cross_validation.n_splits|default(5) }} folds; depois o modelo é treinado com 100% dos dados.</p>
+            <p class="muted">★ vencedor: maior F1-macro entre os modelos que acertam pelo menos 6 das 8 fotos do professor ({{ (metadata.evaluation or {}).professor_photos.hits|default("—") }}/8). Validação cruzada estratificada {{ metadata.cross_validation.n_splits|default(5) }}×{{ metadata.cross_validation.n_repeats|default(10) }}; depois o vencedor é treinado com todas as fotos do res.csv.</p>
         </section>
 
         <section class="card span-4" aria-labelledby="cm-title">
@@ -163,7 +163,7 @@
             <dl class="facts audit">
                 <div><dt>Treinado em</dt><dd>{{ (metadata.trained_at[:16]|replace('T', ' ')) ~ ' UTC' if metadata.trained_at else 'Artefato legado' }}</dd></div>
                 <div><dt>Schema de atributos</dt><dd>{{ metadata.feature_schema.version|default('legado') }}</dd></div>
-                <div><dt>Atributos</dt><dd>{{ metadata.feature_schema.count|default('—') }} (cor do centro da foto)</dd></div>
+                <div><dt>Atributos</dt><dd>{{ metadata.feature_schema.count|default(768) }} do histograma → {{ metadata.feature_schema.color_shape_count|default(78) }} de formato da cor</dd></div>
                 <div><dt>Validação</dt><dd>{{ metadata.cross_validation.strategy|default('—') }} · seed {{ metadata.random_seed|default('—') }}</dd></div>
                 <div><dt>Python</dt><dd>{{ metadata.runtime.python|default('não registrado') }}</dd></div>
                 <div><dt>Hash do dataset</dt><dd><code>{{ (ds.sha256|default('não disponível'))[:24] }}…</code></dd></div>
@@ -182,10 +182,10 @@
             <ol class="kdd">
                 <li><b>01</b><strong>Seleção</strong><p>Leitura do dataset e identificação do alvo (limpo/sujo).</p></li>
                 <li><b>02</b><strong>Pré-processamento</strong><p>Nulos, duplicatas, classes e integridade por hash.</p></li>
-                <li><b>03</b><strong>Transformação</strong><p>Recorte do centro da foto (onde fica o copo) e {{ metadata.feature_schema.count|default(19) }} estatísticas de saturação, brilho e cromaticidade.</p></li>
-                <li><b>04</b><strong>Mineração</strong><p>{{ metadata.model_name|default('Naive Bayes') }} em validação cruzada estratificada.</p></li>
+                <li><b>03</b><strong>Transformação</strong><p>Dois cenários: histograma bruto (768 proporções) e formato da cor ({{ metadata.feature_schema.color_shape_count|default(78) }} atributos sem brilho); normalização de 0 a 1.</p></li>
+                <li><b>04</b><strong>Mineração</strong><p>{{ metrics|length }} modelos (8 algoritmos × 2 cenários) em validação cruzada estratificada repetida.</p></li>
                 <li><b>05</b><strong>Avaliação</strong><p>{{ primary|replace('_', ' ') }} como métrica principal.</p></li>
-                <li><b>06</b><strong>Modelo final</strong><p><code>modelo_agua.pkl</code> treinado em 100% dos dados.</p></li>
+                <li><b>06</b><strong>Modelo final</strong><p>{{ metadata.model_name|default('Vencedor') }} retreinado com as {{ ds.samples|default(50) }} fotos do res.csv.</p></li>
                 <li><b>07</b><strong>Uso</strong><p>Mesmo pipeline na API, no upload e no agente 3D.</p></li>
             </ol>
         </section>

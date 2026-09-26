@@ -4,40 +4,43 @@ Esta pasta separa aquisição, revisão e artefatos derivados.
 
 ```text
 data/
-├── raw/                 # Imagens originais catalogadas
-│   ├── proprias/        # Fotos de celular do projeto (entram no treino)
-│   │   ├── limpo/
-│   │   └── sujo/
-│   └── commons/         # Wikimedia Commons (entram no treino)
-│       ├── limpo/
-│       └── sujo/
+├── teste/               # Fotos de teste: NUNCA entram no treino
+│   ├── professor/       # As 8 fotos do professor (limpo/, sujo/)
+│   └── whatsapp/        # 7 fotos extras (limpo/, sujo/)
+├── raw/
+│   ├── commons/         # Wikimedia Commons (reserva, fora do treino)
+│   └── proprias/        # Criada pelo add_to_dataset.py para fotos novas de treino
 ├── metadata/
 │   └── images.csv       # Origem, licença, autor, hash, grupo e revisão
-├── processed/           # Reservado para datasets derivados
-├── splits/              # Reservado para divisões agrupadas futuras
-└── reports/             # Auditorias e resumo do dataset
+└── reports/             # Auditorias e previsões nas fotos de teste
 ```
 
 ## Política de inclusão
 
-Uma imagem só entra no treino (`python train_model.py`) quando possui
-`review_status=approved`. O nome ou a consulta de busca não é usado como verdade
-do rótulo. O treino confere o hash antes de extrair a cor do centro da foto.
+O treino usa o `res.csv` da atividade (50 fotos, 768 atributos de histograma RGB).
+`python -m scripts.prepare_dataset` reconstrói o `res.csv` a partir das 50 linhas
+preservadas em `res.csv.bak` mais as imagens com `review_status=approved`
+(hoje nenhuma, então o `res.csv` tem exatamente as 50 fotos originais). O nome ou a
+consulta de busca não é usado como verdade do rótulo, e o hash é conferido antes
+de extrair o histograma.
 
-Outros status do catálogo:
+Status do catálogo:
 
-- `reserva` — imagem revisada e válida, mas deixada fora do treino (hoje nenhuma).
-- `holdout` — teste externo, nunca treinado (hoje nenhuma imagem).
+- `holdout` — fotos de teste (`data/teste/`): o professor e as extras. Nunca entram
+  no treino; `train_model.py` testa todos os modelos nelas.
+- `reserva` — revisada e válida, mas fora do treino: as 36 fotos do Wikimedia Commons,
+  quase todas de água limpa (31 × 5), que ensinavam "foto da internet = limpo".
+- `approved` — entra no `res.csv` na próxima execução de `prepare_dataset`.
 - `rejected` / `pending` — descartadas ou aguardando revisão.
 
 ```bash
 python -m scripts.import_wikimedia   # aquisição pendente
 python -m scripts.review_candidates # decisões humanas registradas
 python -m scripts.audit_dataset     # duplicatas e dimensões
-python train_model.py               # avalia e treina o modelo_agua
+python -m scripts.prepare_dataset   # reconstrói res.csv
+python train_model.py               # compara 16 modelos e treina o vencedor
 ```
 
-`res.csv.bak` preserva as 50 linhas do notebook do Colab. Elas existem só como
-histogramas, sem as fotos, então não servem para recortar o centro e não entram
-no treino atual. `scripts/prepare_dataset.py` e `res.csv` ficam apenas como
-registro da abordagem anterior.
+`res.csv.bak` preserva as 50 linhas do `res.csv` original da atividade. Como os
+arquivos das fotos e as sessões dessas linhas não estão disponíveis, não é possível
+auditar near-duplicates nem fazer validação agrupada sobre elas.

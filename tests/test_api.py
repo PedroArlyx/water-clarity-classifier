@@ -48,10 +48,10 @@ def test_false_extension_returns_415(client, png_bytes):
     assert response.get_json()["error"]["code"] == "media_type_mismatch"
 
 
-# Fotos do treino: o teste confirma que o upload chega ao modelo, não mede generalização.
+# Fotos do professor, fora do treino: o modelo vencedor acerta estas duas.
 @pytest.mark.parametrize(("filename", "expected"), [("limpo2.jpg", "limpo"), ("sujo19.jpg", "sujo")])
 def test_real_images_reach_the_model(client, filename, expected):
-    with (PROJECT_ROOT / "data" / "raw" / "proprias" / expected / filename).open("rb") as image:
+    with (PROJECT_ROOT / "data" / "teste" / "professor" / expected / filename).open("rb") as image:
         response = client.post(
             "/api/v1/predictions",
             data={"image": (image, filename, "image/jpeg")},
@@ -80,23 +80,25 @@ def test_request_body_limit_returns_413():
 
 def test_metadata_matches_saved_artifact(client):
     metadata = client.get("/api/v1/model/metadata").get_json()["data"]
-    assert metadata["dataset"]["samples"] == 51
-    assert metadata["feature_schema"]["count"] == 19
-    assert metadata["model_name"] == "Regressão logística"
+    assert metadata["dataset"]["samples"] == 50
+    assert metadata["feature_schema"]["count"] == 768
+    assert metadata["model_name"] == "Naive Bayes · formato da cor"
+    assert metadata["evaluation"]["professor_photos"] == {"hits": 7, "total": 8}
     assert metadata["model_details"]["file"] == "modelo_agua.pkl"
     assert metadata["primary_metric"] == "f1_macro"
 
 
 def test_prediction_exposes_real_pipeline_details(client):
-    with (PROJECT_ROOT / "data" / "raw" / "proprias" / "limpo" / "limpo2.jpg").open("rb") as image:
+    with (PROJECT_ROOT / "data" / "teste" / "professor" / "limpo" / "limpo2.jpg").open("rb") as image:
         body = client.post(
             "/api/v1/predictions",
             data={"image": (image, "limpo2.jpg", "image/jpeg")},
             content_type="multipart/form-data",
         ).get_json()["data"]
     features = body["features"]
-    assert features["count"] == 19
-    assert features["center_fraction"] == 0.5
+    assert features["count"] == 768
+    assert features["model_feature_count"] == 78
+    assert features["transformation"] == "formato da cor"
     for channel in ("r", "g", "b"):
         assert len(features["histogram"][channel]) == 32
         assert abs(sum(features["histogram"][channel]) - 1) < 1e-3

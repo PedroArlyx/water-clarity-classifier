@@ -1,7 +1,8 @@
 """Validação de imagens e extração de características de cor.
 
-O modelo_agua usa a cor do centro da foto (``center_color_features``); o histograma RGB
-da foto inteira continua sendo calculado só para a visualização na interface.
+A foto vira um histograma RGB de 768 valores, no mesmo formato do ``res.csv``. O
+``ColorShapeTransformer`` (formato da cor) fica dentro do pipeline do modelo, então
+treino e aplicação recebem exatamente o mesmo tratamento.
 """
 
 from __future__ import annotations
@@ -10,10 +11,11 @@ import io
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO, Mapping
+from typing import BinaryIO
 
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from water_clarity.errors import InvalidImageError
 from water_clarity.settings import (
@@ -27,8 +29,7 @@ from water_clarity.settings import (
 
 CHANNELS = ("r", "g", "b")
 HISTOGRAM_FEATURES = tuple(f"{channel}{index}" for channel in CHANNELS for index in range(256))
-FEATURE_SCHEMA_VERSION = "cor-do-centro-v1"
-CENTER_FRACTION = 0.5
+FEATURE_SCHEMA_VERSION = "rgb-histogram-768"
 EXTENSION_FORMATS = {
     "png": "PNG",
     "jpg": "JPEG",
@@ -155,47 +156,55 @@ def extract_features_from_image(image: Image.Image) -> tuple[dict[str, float], t
     return histogram_features, tuple(means)  # type: ignore[return-value]
 
 
-def to_feature_vector(features: Mapping[str, float], columns: list[str] | tuple[str, ...]) -> list[float]:
-    missing = [column for column in columns if column not in features]
-    if missing:
-        raise ValueError(f"Schema incompatível; atributos ausentes: {missing[:5]}")
-    return [float(features[column]) for column in columns]
+
+# 25 percentis por canal: 2%, 6%, ..., 98%
+SHAPE_PERCENTILES = tuple(round(0.02 + 0.04 * index, 2) for index in range(25))
+_PAIRS = (("r", "g"), ("g", "b"), ("r", "b"))
+COLOR_SHAPE_FEATURES = tuple(
+    f"{first}-{second}_p{round(q * 100):02d}" for first, second in _PAIRS for q in SHAPE_PERCENTILES
+) + tuple(f"contraste_{channel}" for channel in CHANNELS)
 
 
+def color_shape_features(histograms: np.ndarray) -> np.ndarray:
+    """Transforma histogramas RGB (n × 768) no "formato da cor" (n × 78).
 
-CENTER_COLOR_FEATURES = (
-    "sat_p10", "sat_p25", "sat_p50", "sat_p75", "sat_p90", "sat_mean", "sat_std",
-    "val_p10", "val_p50", "val_p90", "val_std",
-    "chroma_r", "chroma_g", "chroma_b", "chroma_r_std", "chroma_g_std", "chroma_b_std",
-    "sat_above_025", "sat_above_040",
-)
+    Água limpa é transparente: a foto mostra o fundo neutro e as curvas R, G e B têm o
+    mesmo formato. Água suja é colorida e cria um "morro" num canal que não aparece nos
+    outros. Para cada canal calculamos 25 percentis e os padronizamos por
+    ``(percentil − média) / desvio``, o que remove brilho e contraste; os atributos são as
+    diferenças de formato R−G, G−B e R−B (75) e o contraste relativo de cada canal (3).
 
-
-def center_color_features(image: Image.Image, fraction: float = CENTER_FRACTION) -> np.ndarray:
-    """Estatísticas de cor do centro da foto, onde normalmente está o copo.
-
-    Diferente do histograma da foto inteira, ignora a maior parte do fundo. É o vetor de
-    entrada do modelo_agua, no treino e na inferência.
+    Aceita contagens brutas (como no ``res.csv``) ou proporções: cada canal é normalizado
+    pela própria soma, então o resultado não depende do tamanho da imagem.
     """
-    rgb_image = image.convert("RGB")
-    width, height = rgb_image.size
-    crop_w, crop_h = int(width * fraction), int(height * fraction)
-    left, top = (width - crop_w) // 2, (height - crop_h) // 2
-    center = rgb_image.crop((left, top, left + crop_w, top + crop_h)).resize((256, 256))
-    rgb = np.asarray(center, dtype=float) / 255
-    hsv = np.asarray(center.convert("HSV"), dtype=float) / 255
-    saturation, value = hsv[..., 1].ravel(), hsv[..., 2].ravel()
-    chroma = (rgb / (rgb.sum(axis=-1, keepdims=True) + 1e-6)).reshape(-1, 3)
-    return np.array(
-        [
-            *np.percentile(saturation, [10, 25, 50, 75, 90]),
-            saturation.mean(),
-            saturation.std(),
-            *np.percentile(value, [10, 50, 90]),
-            value.std(),
-            *chroma.mean(axis=0),
-            *chroma.std(axis=0),
-            (saturation > 0.25).mean(),
-            (saturation > 0.40).mean(),
-        ]
-    )
+    histograms = np.asarray(histograms, dtype=float).reshape(-1, len(CHANNELS), 256)
+    totals = histograms.sum(axis=2, keepdims=True)
+    if np.any(totals <= 0):
+        raise ValueError("Histograma RGB com soma zero.")
+    proportions = histograms / totals
+    intensities = np.arange(256, dtype=float)
+    means = proportions @ intensities
+    stds = np.sqrt(np.einsum("ncb,ncb->nc", proportions, (intensities - means[..., None]) ** 2))
+    cumulative = np.cumsum(proportions, axis=2)
+    percentiles = np.empty((*means.shape, len(SHAPE_PERCENTILES)))
+    for row in range(cumulative.shape[0]):
+        for channel in range(len(CHANNELS)):
+            percentiles[row, channel] = np.searchsorted(cumulative[row, channel], SHAPE_PERCENTILES)
+    shapes = (percentiles - means[..., None]) / (stds[..., None] + 1e-9)
+    index = {channel: position for position, channel in enumerate(CHANNELS)}
+    differences = [shapes[:, index[first]] - shapes[:, index[second]] for first, second in _PAIRS]
+    contrast = stds / (stds.mean(axis=1, keepdims=True) + 1e-9)
+    return np.hstack([*differences, contrast])
+
+
+class ColorShapeTransformer(TransformerMixin, BaseEstimator):
+    """Etapa de ``Pipeline``: histograma RGB de 768 valores → 78 atributos de formato da cor."""
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        return color_shape_features(np.asarray(X, dtype=float))
+
+    def get_feature_names_out(self, input_features=None):
+        return np.asarray(COLOR_SHAPE_FEATURES, dtype=object)
