@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: water-clarity-classifier
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: TRUSTED_HOSTS
+        value: .onrender.com,localhost,127.0.0.1

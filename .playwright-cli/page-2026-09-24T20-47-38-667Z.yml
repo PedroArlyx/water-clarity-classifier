@@ -1,0 +1,88 @@
+- generic [active] [ref=e1]:
+  - link "Pular para o conteúdo" [ref=e2] [cursor=pointer]:
+    - /url: "#conteudo"
+  - banner [ref=e3]:
+    - link "Water Clarity Lab — início" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e8]:
+        - strong [ref=e9]: Water Clarity
+        - generic [ref=e10]: Visual Intelligence Lab
+    - navigation "Navegação principal" [ref=e11]:
+      - link "Classificar" [ref=e12] [cursor=pointer]:
+        - /url: /
+      - link "Cozinha 3D" [ref=e13] [cursor=pointer]:
+        - /url: /demonstracao
+      - link "Experimento" [ref=e14] [cursor=pointer]:
+        - /url: /experimento
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - paragraph [ref=e18]: Modo clássico · requisito da atividade
+        - heading "A aparência da água, interpretada por RGB." [level=1] [ref=e19]
+        - paragraph [ref=e20]: Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai as cores e classifica a aparência como limpa ou suja.
+        - note [ref=e21]:
+          - generic [ref=e24]: Esta análise visual não substitui testes químicos ou microbiológicos.
+      - generic [ref=e26]:
+        - generic [ref=e27]: 768+
+        - generic [ref=e28]: features RGB
+    - region [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Nova análise
+          - heading "Enviar foto do copo" [level=2] [ref=e35]
+          - paragraph [ref=e36]: PNG, JPG, BMP ou WebP · máximo de 16 MB.
+        - generic [ref=e37]:
+          - generic [ref=e38] [cursor=pointer]:
+            - button "Escolha uma imagem limpo2.jpg · 4.51 MB" [ref=e82]
+            - strong [ref=e42]: Escolha uma imagem
+            - generic [ref=e43]: limpo2.jpg · 4.51 MB
+          - img "Prévia da imagem selecionada" [ref=e84]
+          - button "Classificar aparência" [ref=e44] [cursor=pointer]
+          - paragraph [ref=e46]: Análise concluída.
+      - complementary [ref=e47]:
+        - generic [ref=e85]:
+          - paragraph [ref=e86]: Classificação visual
+          - heading "LIMPO" [level=2] [ref=e89]
+          - paragraph [ref=e90]: A água foi classificada visualmente como limpo.
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - term [ref=e93]: Probabilidade estimada
+              - definition [ref=e94]: 90.1%
+            - generic [ref=e95]:
+              - term [ref=e96]: Modelo
+              - definition [ref=e97]: SVM
+            - generic [ref=e98]:
+              - term [ref=e99]: RGB médio
+              - definition [ref=e100]: R 160.15 · G 156 · B 148.95
+          - group [ref=e101]:
+            - generic "Como o sistema chegou nisso?" [ref=e102] [cursor=pointer]
+          - paragraph [ref=e103]: Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica.
+    - region [ref=e54]:
+      - paragraph [ref=e55]: Pipeline real
+      - heading "Da imagem até a decisão" [level=2] [ref=e56]
+      - list [ref=e57]:
+        - listitem [ref=e58]:
+          - generic [ref=e59]: "01"
+          - strong [ref=e60]: Imagem
+          - generic [ref=e61]: Upload validado
+        - listitem [ref=e62]:
+          - generic [ref=e63]: "02"
+          - strong [ref=e64]: RGB
+          - generic [ref=e65]: 3 × 256 bins
+        - listitem [ref=e66]:
+          - generic [ref=e67]: "03"
+          - strong [ref=e68]: Features
+          - generic [ref=e69]: Normalização
+        - listitem [ref=e70]:
+          - generic [ref=e71]: "04"
+          - strong [ref=e72]: Modelo
+          - generic [ref=e73]: Algoritmo vencedor
+        - listitem [ref=e74]:
+          - generic [ref=e75]: "05"
+          - strong [ref=e76]: Resultado
+          - generic [ref=e77]: Aparência visual
+  - contentinfo [ref=e78]:
+    - paragraph [ref=e79]:
+      - strong [ref=e80]: "Aviso científico:"
+      - text: o sistema analisa somente a aparência visual. Não determina potabilidade.
+    - paragraph [ref=e81]: Projeto acadêmico · Pipeline RGB + classificação tradicional

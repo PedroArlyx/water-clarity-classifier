@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Experimento KDD · Water Clarity Lab{% endblock %}
+{% set ds = metadata.dataset or {} %}
+{% set dist = ds.class_distribution or {} %}
+{% set primary = metadata.primary_metric|default('f1_macro') %}
+{% block content %}
+<section class="page-hero shell">
+    <p class="kicker">Dashboard acadêmico · artefatos reais do pipeline</p>
+    <h1>Do dataset ao modelo em produção.</h1>
+    <p class="lead">Todos os números desta página são lidos de <code>model/metadata.json</code> e <code>resultados_avaliacao.csv</code>, gravados pelo treinamento. Nada é calculado ou estimado no navegador.</p>
+    {% if metadata.warning %}<div class="notice" role="alert">{{ metadata.warning }}</div>{% endif %}
+</section>
+
+<div class="shell">
+    <section class="kpis" aria-label="Resumo do experimento">
+        <article class="kpi kpi--hero">
+            <small>Modelo</small>
+            <strong>{{ metadata.model_name|default('—') }}</strong>
+            <span>{% if winner_row %}{{ primary|replace('_', ' ') }} {{ '%.3f'|format(winner_row[primary]|float) }}{% else %}maior {{ primary }}{% endif %}</span>
+        </article>
+        <article class="kpi">
+            <small>Amostras</small>
+            <strong>{{ ds.samples|default('—') }}</strong>
+            <span>dataset avaliado</span>
+        </article>
+        <article class="kpi">
+            <small class="kpi__key is-clean">Limpo</small>
+            <strong>{{ dist.limpo|default('—') }}</strong>
+            <span>amostras rotuladas</span>
+        </article>
+        <article class="kpi">
+            <small class="kpi__key is-dirty">Sujo</small>
+            <strong>{{ dist.sujo|default('—') }}</strong>
+            <span>amostras rotuladas</span>
+        </article>
+        <article class="kpi">
+            <small>Atributos</small>
+            <strong>{{ metadata.model_details.k|default('—') }}</strong>
+            <span>de cor, no {{ metadata.model_details.feature_selection|default('centro da foto') }}</span>
+        </article>
+    </section>
+
+    <div class="dash">
+        <section class="card span-8" aria-labelledby="compare-title">
+            <div class="chart-head">
+                <div>
+                    <h2 id="compare-title">Desempenho do modelo</h2>
+                    <p>Média na validação cruzada; a haste mostra ± 1 desvio-padrão entre folds.</p>
+                </div>
+                <div class="segmented" role="radiogroup" aria-label="Métrica exibida" id="metric-switch">
+                    {% for c in charts %}<button type="button" role="radio" data-metric="{{ c.key }}" aria-checked="{{ 'true' if c.key == primary else 'false' }}">{{ c.label }}</button>{% endfor %}
+                </div>
+            </div>
+            {% for c in charts %}
+            <div class="metric-panel" data-panel="{{ c.key }}" {% if c.key != primary %}hidden{% endif %}>
+                <svg class="chart" viewBox="0 0 {{ chart.width }} {{ c.height + 8 }}" role="img" aria-label="{{ c.label }} por algoritmo, ordenado do maior para o menor">
+                    {% for t in [0, 0.25, 0.5, 0.75, 1] %}
+                    {% set x = chart.label + t * (chart.width - chart.label - chart.value) %}
+                    <line class="chart__grid" x1="{{ x }}" x2="{{ x }}" y1="{{ chart.top - 6 }}" y2="{{ c.height }}"/>
+                    <text class="chart__muted" x="{{ x }}" y="12" text-anchor="middle">{{ '%.2f'|format(t) }}</text>
+                    {% endfor %}
+                    <line class="chart__baseline" x1="{{ chart.label }}" x2="{{ chart.label }}" y1="{{ chart.top - 6 }}" y2="{{ c.height }}"/>
+                    {% for b in c.bars %}
+                    <g class="chart__row">
+                        <title>{{ b.model }} — {{ c.label }} {{ '%.3f'|format(b.value) }}{% if b.std is not none %} ± {{ '%.3f'|format(b.std) }}{% endif %}</title>
+                        <rect class="chart__hit" x="0" y="{{ b.y - 8 }}" width="{{ chart.width }}" height="{{ chart.row }}"/>
+                        <text class="chart__label" x="{{ chart.label - 12 }}" y="{{ b.cy + 4 }}" text-anchor="end">{{ b.model }}{% if b.winner %} ★{% endif %}</text>
+                        <path class="chart__bar{% if b.winner %} chart__bar--winner{% endif %}" d="M{{ chart.label }},{{ b.y }}h{{ b.width - 4 }}a4,4 0 0 1 4,4v{{ chart.bar - 8 }}a4,4 0 0 1 -4,4h-{{ b.width - 4 }}z"/>
+                        {% if b.std %}<line class="chart__whisker" x1="{{ b.w_low }}" x2="{{ b.w_high }}" y1="{{ b.cy }}" y2="{{ b.cy }}"/>
+                        <line class="chart__whisker" x1="{{ b.w_high }}" x2="{{ b.w_high }}" y1="{{ b.cy - 4 }}" y2="{{ b.cy + 4 }}"/>{% endif %}
+                        <text class="chart__value" x="{{ chart.width - 4 }}" y="{{ b.cy + 4 }}" text-anchor="end">{{ '%.3f'|format(b.value) }}</text>
+                    </g>
+                    {% endfor %}
+                </svg>
+            </div>
+            {% else %}
+            <p class="muted">Execute <code>python train_model.py</code> para gerar as métricas.</p>
+            {% endfor %}
+            <p class="muted">Validação cruzada estratificada e agrupada por sessão/fonte, {{ metadata.cross_validation.n_splits|default(5) }} folds; depois o modelo é treinado com 100% dos dados.</p>
+        </section>
+
+        <section class="card span-4" aria-labelledby="cm-title">
+            <div class="chart-head"><div>
+                <h2 id="cm-title">Matriz de confusão</h2>
+                <p>{{ metadata.model_name|default('Vencedor') }} · predições fora do fold ({{ confusion.total if confusion else '—' }} amostras).</p>
+            </div></div>
+            {% if confusion %}
+            <table class="cm">
+                <caption class="visually-hidden">Linhas: classe real. Colunas: classe prevista.</caption>
+                <thead><tr><th scope="col"><span class="visually-hidden">Real</span></th>{% for l in confusion.labels %}<th scope="col">prev. {{ l }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                {% for r in confusion.rows %}
+                <tr><th scope="row">real {{ r.label }}</th>{% for cell in r.cells %}<td data-level="{{ cell.level }}"><strong>{{ cell.count }}</strong><small>{{ '%.0f'|format(cell.share * 100) }}%{% if cell.hit %} acerto{% endif %}</small></td>{% endfor %}</tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <p class="cm-axis">Percentual por linha (classe real). Diagonal = acertos.</p>
+            {% else %}<p class="muted">Matriz indisponível no artefato atual.</p>{% endif %}
+
+            {% set report = (metadata.evaluation or {}).classification_report or {} %}
+            {% if report %}
+            <h3 class="subhead">Por classe</h3>
+            <dl class="facts">
+                {% for l in (metadata.evaluation.labels or []) %}{% set rr = report[l] %}
+                <div><dt>{{ l }} · precisão / recall</dt><dd>{{ '%.2f'|format(rr.precision) }} / {{ '%.2f'|format(rr.recall) }}</dd></div>
+                {% endfor %}
+            </dl>
+            {% endif %}
+        </section>
+
+        <section class="card span-12" aria-labelledby="table-title">
+            <div class="chart-head"><div>
+                <h2 id="table-title">Todas as métricas</h2>
+                <p>Tabela completa (alternativa acessível ao gráfico). Valores médios ± desvio-padrão da validação cruzada.</p>
+            </div></div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead><tr><th scope="col">Modelo</th>{% for key, label in metric_names %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+                    <tbody>
+                    {% for row in metrics %}
+                    <tr data-winner="{{ 'true' if row.modelo == metadata.model_name else 'false' }}">
+                        <th scope="row">{{ row.modelo }}{% if row.modelo == metadata.model_name %} ★{% endif %}</th>
+                        {% for key, label in metric_names %}
+                        <td class="mono">{% if row[key] is defined and row[key] != '' %}{{ '%.3f'|format(row[key]|float) }}{% if row[key ~ '_std'] %} <span class="std">± {{ '%.3f'|format(row[key ~ '_std']|float) }}</span>{% endif %}{% else %}—{% endif %}</td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7">Execute <code>python train_model.py</code> para gerar as métricas.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card span-5" aria-labelledby="dist-title">
+            <div class="chart-head"><div>
+                <h2 id="dist-title">Distribuição das classes</h2>
+                <p>Desbalanceamento tratado com <code>class_weight</code> e métricas macro.</p>
+            </div></div>
+            {% if dist.limpo is defined and dist.sujo is defined %}
+            {% set total = dist.limpo + dist.sujo %}
+            <div class="split">
+                <div class="split__bar" role="img" aria-label="{{ dist.limpo }} limpo e {{ dist.sujo }} sujo">
+                    <svg viewBox="0 0 100 12" preserveAspectRatio="none" width="100%" height="12" aria-hidden="true">
+                        <rect class="split-clean" x="0" y="0" width="{{ 100 * dist.limpo / total - 0.8 }}" height="12" rx="1.5"/>
+                        <rect class="split-dirty" x="{{ 100 * dist.limpo / total + 0.8 }}" y="0" width="{{ 100 * dist.sujo / total - 0.8 }}" height="12" rx="1.5"/>
+                    </svg>
+                </div>
+                <div class="split__legend">
+                    <span class="kpi__key is-clean">Limpo <b>{{ dist.limpo }}</b> ({{ '%.0f'|format(100 * dist.limpo / total) }}%)</span>
+                    <span class="kpi__key is-dirty">Sujo <b>{{ dist.sujo }}</b> ({{ '%.0f'|format(100 * dist.sujo / total) }}%)</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if ds.provenance_limitation %}<p class="muted">{{ ds.provenance_limitation }}</p>{% endif %}
+        </section>
+
+        <section class="card span-7" aria-labelledby="audit-title">
+            <div class="chart-head"><div>
+                <h2 id="audit-title">Rastreabilidade do artefato</h2>
+                <p>Metadados gravados junto do modelo serializado.</p>
+            </div></div>
+            <dl class="facts audit">
+                <div><dt>Treinado em</dt><dd>{{ (metadata.trained_at[:16]|replace('T', ' ')) ~ ' UTC' if metadata.trained_at else 'Artefato legado' }}</dd></div>
+                <div><dt>Schema de atributos</dt><dd>{{ metadata.feature_schema.version|default('legado') }}</dd></div>
+                <div><dt>Atributos</dt><dd>{{ metadata.feature_schema.count|default('—') }} (cor do centro da foto)</dd></div>
+                <div><dt>Validação</dt><dd>{{ metadata.cross_validation.strategy|default('—') }} · seed {{ metadata.random_seed|default('—') }}</dd></div>
+                <div><dt>Python</dt><dd>{{ metadata.runtime.python|default('não registrado') }}</dd></div>
+                <div><dt>Hash do dataset</dt><dd><code>{{ (ds.sha256|default('não disponível'))[:24] }}…</code></dd></div>
+            </dl>
+            <div class="figures"><span class="muted">Figuras geradas pelo pipeline:</span>
+                <a href="{{ url_for('web.confusion_matrix_chart') }}">matriz (PNG)</a>
+                <a href="{{ url_for('web.class_distribution_chart') }}">distribuição (PNG)</a>
+            </div>
+        </section>
+
+        <section class="card span-12" aria-labelledby="kdd-title">
+            <div class="chart-head"><div>
+                <p class="kicker">Knowledge Discovery in Databases</p>
+                <h2 id="kdd-title">Etapas KDD implementadas</h2>
+            </div></div>
+            <ol class="kdd">
+                <li><b>01</b><strong>Seleção</strong><p>Leitura do dataset e identificação do alvo (limpo/sujo).</p></li>
+                <li><b>02</b><strong>Pré-processamento</strong><p>Nulos, duplicatas, classes e integridade por hash.</p></li>
+                <li><b>03</b><strong>Transformação</strong><p>Recorte do centro da foto (onde fica o copo) e {{ metadata.feature_schema.count|default(19) }} estatísticas de saturação, brilho e cromaticidade.</p></li>
+                <li><b>04</b><strong>Mineração</strong><p>{{ metadata.model_name|default('Naive Bayes') }} em validação cruzada estratificada.</p></li>
+                <li><b>05</b><strong>Avaliação</strong><p>{{ primary|replace('_', ' ') }} como métrica principal.</p></li>
+                <li><b>06</b><strong>Modelo final</strong><p><code>modelo_agua.pkl</code> treinado em 100% dos dados.</p></li>
+                <li><b>07</b><strong>Uso</strong><p>Mesmo pipeline na API, no upload e no agente 3D.</p></li>
+            </ol>
+        </section>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/experiment.js') }}" defer></script>{% endblock %}

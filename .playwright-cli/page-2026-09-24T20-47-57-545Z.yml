@@ -1,0 +1,77 @@
+- generic [active] [ref=f1e1]:
+  - link "Pular para o conteúdo" [ref=f1e2] [cursor=pointer]:
+    - /url: "#conteudo"
+  - banner [ref=f1e3]:
+    - link "Water Clarity Lab — início" [ref=f1e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f1e8]:
+        - strong [ref=f1e9]: Water Clarity
+        - generic [ref=f1e10]: Visual Intelligence Lab
+    - navigation "Navegação principal" [ref=f1e11]:
+      - link "Classificar" [ref=f1e12] [cursor=pointer]:
+        - /url: /
+      - link "Cozinha 3D" [ref=f1e13] [cursor=pointer]:
+        - /url: /demonstracao
+      - link "Experimento" [ref=f1e14] [cursor=pointer]:
+        - /url: /experimento
+  - main [ref=f1e15]:
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]:
+          - paragraph [ref=f1e19]: Modo demonstração · agente interativo
+          - heading "O robô observa antes de entregar." [level=1] [ref=f1e20]
+          - paragraph [ref=f1e21]: Escolha apenas a aparência da água. A cena será capturada e enviada ao modelo real — nenhum rótulo é enviado à API.
+        - generic [ref=f1e24]:
+          - generic [ref=f1e25]: Estado do agente
+          - strong [ref=f1e26]: Pronto para receber uma tarefa
+      - generic [ref=f1e27]:
+        - region [ref=f1e28]:
+          - generic [ref=f1e29]:
+            - generic [ref=f1e30]:
+              - paragraph [ref=f1e31]: Ambiente
+              - heading "Cozinha interativa" [level=2] [ref=f1e32]
+            - button "Redefinir câmera" [ref=f1e33] [cursor=pointer]
+          - generic [ref=f1e34]:
+            - generic [aria-hidden]:
+              - generic: Arraste para observar
+              - generic: Role para aproximar
+          - paragraph [ref=f1e35]: Cena 3D de uma cozinha com bancada, pia, torneira, copo e robô assistente. Arraste para girar a câmera.
+        - complementary [ref=f1e36]:
+          - generic [ref=f1e37]:
+            - text: Solicitação
+            - paragraph [ref=f1e38]: “Robô, pegue um copo de água para mim.”
+          - group "Escolha a aparência renderizada" [ref=f1e39]:
+            - paragraph [ref=f1e41]: Esta escolha altera cor, transparência e turbidez — não envia uma classe.
+            - generic [ref=f1e42] [cursor=pointer]:
+              - radio "Visualmente limpa Alta transparência, tom neutro" [checked] [ref=f1e43]
+              - generic [ref=f1e44]:
+                - strong [ref=f1e45]: Visualmente limpa
+                - generic [ref=f1e46]: Alta transparência, tom neutro
+            - generic [ref=f1e47] [cursor=pointer]:
+              - radio "Visualmente suja Maior turbidez, tom amarronzado" [ref=f1e48]
+              - generic [ref=f1e49]:
+                - strong [ref=f1e50]: Visualmente suja
+                - generic [ref=f1e51]: Maior turbidez, tom amarronzado
+            - generic [ref=f1e52] [cursor=pointer]:
+              - radio "Aparência aleatória O agente não conhece a classe" [ref=f1e53]
+              - generic [ref=f1e54]:
+                - strong [ref=f1e55]: Aparência aleatória
+                - generic [ref=f1e56]: O agente não conhece a classe
+            - generic [ref=f1e57] [cursor=pointer]:
+              - radio "Upload próprio Executa a cena e classifica sua fotografia" [ref=f1e58]
+              - generic [ref=f1e59]:
+                - strong [ref=f1e60]: Upload próprio
+                - generic [ref=f1e61]: Executa a cena e classifica sua fotografia
+            - button "Imagem própria para a demonstração" [ref=f1e62]
+          - button "Iniciar sequência do agente" [ref=f1e63] [cursor=pointer]
+          - list "Etapas da tarefa" [ref=f1e65]:
+            - listitem [ref=f1e66]: Solicitação recebida
+            - listitem [ref=f1e68]: Coletar água na pia
+            - listitem [ref=f1e70]: Capturar aparência do copo
+            - listitem [ref=f1e72]: Consultar classificador RGB
+            - listitem [ref=f1e74]: Decidir entregar ou alertar
+  - contentinfo [ref=f1e76]:
+    - paragraph [ref=f1e77]:
+      - strong [ref=f1e78]: "Aviso científico:"
+      - text: o sistema analisa somente a aparência visual. Não determina potabilidade.
+    - paragraph [ref=f1e79]: Projeto acadêmico · Pipeline RGB + classificação tradicional

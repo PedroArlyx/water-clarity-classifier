@@ -1,0 +1,11 @@
+{
+  "cataloged": 55,
+  "approved": 51,
+  "rejected": 4,
+  "pending": 0,
+  "reserva": 0,
+  "holdout": 0,
+  "exact_duplicate_hashes": 0,
+  "near_duplicate_pairs_threshold_8": 0,
+  "scope_limitation": "As 50 amostras legadas não possuem arquivos brutos para auditoria perceptual."
+}

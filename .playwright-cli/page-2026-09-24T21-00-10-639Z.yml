@@ -1,0 +1,165 @@
+- generic [active] [ref=f7e1]:
+  - link "Pular para o conteúdo" [ref=f7e2] [cursor=pointer]:
+    - /url: "#conteudo"
+  - banner [ref=f7e3]:
+    - link "Water Clarity Lab — início" [ref=f7e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f7e8]:
+        - strong [ref=f7e9]: Water Clarity
+        - generic [ref=f7e10]: Visual Intelligence Lab
+    - navigation "Navegação principal" [ref=f7e11]:
+      - link "Classificar" [ref=f7e12] [cursor=pointer]:
+        - /url: /
+      - link "Cozinha 3D" [ref=f7e13] [cursor=pointer]:
+        - /url: /demonstracao
+      - link "Experimento" [ref=f7e14] [cursor=pointer]:
+        - /url: /experimento
+  - main [ref=f7e15]:
+    - generic [ref=f7e16]:
+      - paragraph [ref=f7e17]: Dashboard acadêmico · artefatos reais
+      - heading "Do dataset ao modelo final." [level=1] [ref=f7e18]
+      - paragraph [ref=f7e19]: Esta página apresenta os resultados gravados pelo pipeline. Nenhuma métrica é inventada no frontend.
+    - region "Resumo do experimento" [ref=f7e20]:
+      - article [ref=f7e21]:
+        - generic [ref=f7e22]: Amostras
+        - strong [ref=f7e23]: "61"
+        - generic [ref=f7e24]: dataset avaliado
+      - article [ref=f7e25]:
+        - generic [ref=f7e26]: Features
+        - strong [ref=f7e27]: "794"
+        - generic [ref=f7e28]: RGB + estatísticas
+      - article [ref=f7e29]:
+        - generic [ref=f7e30]: Vencedor
+        - strong [ref=f7e31]: SVM
+        - generic [ref=f7e32]: maior f1_macro
+      - article [ref=f7e33]:
+        - generic [ref=f7e34]: Validação
+        - strong [ref=f7e35]: 5 folds
+        - generic [ref=f7e36]: estratificada
+    - generic [ref=f7e37]:
+      - article [ref=f7e38]:
+        - generic [ref=f7e39]:
+          - paragraph [ref=f7e40]: Comparação
+          - heading "Métricas por algoritmo" [level=2] [ref=f7e41]
+          - paragraph [ref=f7e42]: A tabela é a alternativa acessível ao gráfico.
+        - table [ref=f7e44]:
+          - rowgroup [ref=f7e45]:
+            - row [ref=f7e46]:
+              - columnheader "Modelo" [ref=f7e47]
+              - columnheader "Accuracy" [ref=f7e48]
+              - columnheader "Balanced accuracy" [ref=f7e49]
+              - columnheader "F1 macro" [ref=f7e50]
+              - columnheader "F1 ponderado" [ref=f7e51]
+          - rowgroup [ref=f7e52]:
+            - row [ref=f7e53]:
+              - rowheader "SVM" [ref=f7e54]
+              - cell "0.771" [ref=f7e55]
+              - cell "0.785" [ref=f7e56]
+              - cell "0.764" [ref=f7e57]
+              - cell "0.772" [ref=f7e58]
+            - row [ref=f7e59]:
+              - rowheader "LogisticRegression" [ref=f7e60]
+              - cell "0.754" [ref=f7e61]
+              - cell "0.740" [ref=f7e62]
+              - cell "0.738" [ref=f7e63]
+              - cell "0.755" [ref=f7e64]
+            - row [ref=f7e65]:
+              - rowheader "KNN" [ref=f7e66]
+              - cell "0.771" [ref=f7e67]
+              - cell "0.728" [ref=f7e68]
+              - cell "0.730" [ref=f7e69]
+              - cell "0.757" [ref=f7e70]
+            - row [ref=f7e71]:
+              - rowheader "RandomForest" [ref=f7e72]
+              - cell "0.687" [ref=f7e73]
+              - cell "0.659" [ref=f7e74]
+              - cell "0.664" [ref=f7e75]
+              - cell "0.686" [ref=f7e76]
+            - row [ref=f7e77]:
+              - rowheader "DecisionTree" [ref=f7e78]
+              - cell "0.656" [ref=f7e79]
+              - cell "0.632" [ref=f7e80]
+              - cell "0.632" [ref=f7e81]
+              - cell "0.656" [ref=f7e82]
+            - row [ref=f7e83]:
+              - rowheader "NaiveBayes" [ref=f7e84]
+              - cell "0.674" [ref=f7e85]
+              - cell "0.626" [ref=f7e86]
+              - cell "0.608" [ref=f7e87]
+              - cell "0.643" [ref=f7e88]
+            - row [ref=f7e89]:
+              - rowheader "GradientBoosting" [ref=f7e90]
+              - cell "0.642" [ref=f7e91]
+              - cell "0.608" [ref=f7e92]
+              - cell "0.604" [ref=f7e93]
+              - cell "0.631" [ref=f7e94]
+      - article [ref=f7e95]:
+        - generic [ref=f7e96]:
+          - paragraph [ref=f7e97]: Visualização
+          - heading "Comparação dos modelos" [level=2] [ref=f7e98]
+        - img "Gráfico de barras comparando as métricas dos classificadores" [ref=f7e99]
+      - article [ref=f7e100]:
+        - generic [ref=f7e101]:
+          - paragraph [ref=f7e102]: Erros
+          - heading "Matriz de confusão" [level=2] [ref=f7e103]
+        - img "Matriz de confusão do algoritmo vencedor em validação cruzada" [ref=f7e104]
+      - article [ref=f7e105]:
+        - generic [ref=f7e106]:
+          - paragraph [ref=f7e107]: Dataset
+          - heading "Distribuição das classes" [level=2] [ref=f7e108]
+        - img "Gráfico com 23 amostras visualmente limpas e 38 visualmente sujas" [ref=f7e109]
+    - region [ref=f7e110]:
+      - paragraph [ref=f7e111]: Knowledge Discovery in Databases
+      - heading "Etapas KDD implementadas" [level=2] [ref=f7e112]
+      - list [ref=f7e113]:
+        - listitem [ref=f7e114]:
+          - generic [ref=f7e115]: "1"
+          - strong [ref=f7e116]: Seleção
+          - paragraph [ref=f7e117]: Leitura do dataset e identificação do alvo.
+        - listitem [ref=f7e118]:
+          - generic [ref=f7e119]: "2"
+          - strong [ref=f7e120]: Pré-processamento
+          - paragraph [ref=f7e121]: Nulos, duplicatas, classes e integridade.
+        - listitem [ref=f7e122]:
+          - generic [ref=f7e123]: "3"
+          - strong [ref=f7e124]: Transformação
+          - paragraph [ref=f7e125]: Histogramas normalizados e estatísticas RGB.
+        - listitem [ref=f7e126]:
+          - generic [ref=f7e127]: "4"
+          - strong [ref=f7e128]: Mineração
+          - paragraph [ref=f7e129]: Sete algoritmos em validação cruzada.
+        - listitem [ref=f7e130]:
+          - generic [ref=f7e131]: "5"
+          - strong [ref=f7e132]: Avaliação
+          - paragraph [ref=f7e133]: F1 macro como métrica principal.
+        - listitem [ref=f7e134]:
+          - generic [ref=f7e135]: "6"
+          - strong [ref=f7e136]: Modelo final
+          - paragraph [ref=f7e137]: Vencedor retreinado em 100% dos dados.
+        - listitem [ref=f7e138]:
+          - generic [ref=f7e139]: "7"
+          - strong [ref=f7e140]: Uso
+          - paragraph [ref=f7e141]: Mesmo pipeline conectado à API e ao agente.
+    - generic [ref=f7e142]:
+      - generic [ref=f7e143]:
+        - paragraph [ref=f7e144]: Rastreabilidade
+        - heading "Auditoria do artefato" [level=2] [ref=f7e145]
+      - generic [ref=f7e146]:
+        - generic [ref=f7e147]:
+          - term [ref=f7e148]: Treinado em
+          - definition [ref=f7e149]: 2026-09-24T20:41:21.459691+00:00
+        - generic [ref=f7e150]:
+          - term [ref=f7e151]: Hash do dataset
+          - definition [ref=f7e152]:
+            - code [ref=f7e153]: 1d4dde84a3de34f55f2a7ee31b80c253147c9edbc35428ce0f89ef1a2b7908bb
+        - generic [ref=f7e154]:
+          - term [ref=f7e155]: Schema
+          - definition [ref=f7e156]: rgb-histogram-stats-v2
+        - generic [ref=f7e157]:
+          - term [ref=f7e158]: Python
+          - definition [ref=f7e159]: 3.14.7
+  - contentinfo [ref=f7e160]:
+    - paragraph [ref=f7e161]:
+      - strong [ref=f7e162]: "Aviso científico:"
+      - text: o sistema analisa somente a aparência visual. Não determina potabilidade.
+    - paragraph [ref=f7e163]: Projeto acadêmico · Pipeline RGB + classificação tradicional
