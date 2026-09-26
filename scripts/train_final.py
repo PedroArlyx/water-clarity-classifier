@@ -1,4 +1,4 @@
-"""Avalia os candidatos e treina o vencedor com todo o dataset."""
+"""Avalia e treina o modelo_agua com todo o dataset."""
 
 from train_model import run_pipeline
 

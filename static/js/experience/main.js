@@ -249,7 +249,7 @@ function fillSheet() {
     }
     const winner = metadata?.evaluation?.winner_metrics;
     facts($("#sheet-model"), [
-        ["Algoritmo vencedor", metadata?.model_name],
+        ["Modelo (modelo_agua)", metadata?.model_name],
         ["Critério de seleção", metadata?.primary_metric],
         ["F1 macro (validação)", winner ? formatNumber(winner.f1_macro, 3) : null],
         ["Balanced accuracy", winner ? formatNumber(winner.balanced_accuracy, 3) : null],

@@ -1,5 +1,7 @@
 # Relatório técnico da evolução
 
+> **Histórico.** Este relatório descreve o experimento anterior (comparação de sete algoritmos, SVM vencedor, 794 atributos). Esse modelo foi removido; a aplicação usa somente `model/modelo_agua.pkl` (Naive Bayes). Métricas atuais em `model/metadata.json` e no README.
+
 ## Resumo executivo
 
 O projeto original cumpria o fluxo básico, porém concentrava aplicação, processamento e inferência, validava upload principalmente pela extensão, usava um artefato sem contexto, possuía apenas 52 linhas e selecionava por F1 ponderado. A versão atual preserva o classificador tradicional baseado em RGB e o transforma em um fluxo rastreável de dados, experimento, modelo e aplicação.

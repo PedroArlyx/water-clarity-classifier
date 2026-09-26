@@ -7,14 +7,11 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = PROJECT_ROOT / "model"
-MODEL_PATH = MODEL_DIR / "classifier.joblib"
-LEGACY_MODEL_PATH = MODEL_DIR / "model.pkl"
+# Único artefato de classificação da água (limpo/sujo), gerado por train_model.py.
+WATER_MODEL_PATH = MODEL_DIR / "modelo_agua.pkl"
 MODEL_METADATA_PATH = MODEL_DIR / "metadata.json"
-EVALUATION_METADATA_PATH = MODEL_DIR / "evaluation_latest.json"
-FEATURE_SCHEMA_PATH = MODEL_DIR / "feature_schema.json"
 RESULTS_PATH = PROJECT_ROOT / "resultados_avaliacao.csv"
 CONFUSION_MATRIX_PATH = PROJECT_ROOT / "matriz_confusao.png"
-COMPARISON_CHART_PATH = PROJECT_ROOT / "comparacao_modelos.png"
 CLASS_DISTRIBUTION_PATH = PROJECT_ROOT / "distribuicao_classes.png"
 DATASET_PATH = PROJECT_ROOT / "res.csv"
 

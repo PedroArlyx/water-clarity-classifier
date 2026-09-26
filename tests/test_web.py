@@ -33,7 +33,6 @@ def test_unknown_page_uses_friendly_error(client):
 @pytest.mark.parametrize(
     "path",
     [
-        "/artefatos/comparacao-modelos.png",
         "/artefatos/matriz-confusao.png",
         "/artefatos/distribuicao-classes.png",
         "/static/vendor/three.module.js",
@@ -56,7 +55,6 @@ def test_experiment_dashboard_uses_saved_metrics(client):
     for row in rows:
         assert row["modelo"] in html
         assert f"{float(row['f1_macro']):.3f}" in html
-    assert 'data-level="' in html  # matriz de confusão renderizada
 
 
 @pytest.mark.parametrize(

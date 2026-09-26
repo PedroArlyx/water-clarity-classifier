@@ -1,31 +1,30 @@
 # Water Clarity Classifier
 
-Classificador educacional que estima se a água de um copo parece **limpa** ou **suja** a partir de uma fotografia. O repositório reúne aquisição e auditoria de dados, engenharia de atributos RGB, comparação reproduzível de modelos, API Flask, interface clássica e uma demonstração 3D cujo robô envia uma captura real da cena ao mesmo classificador.
+Classificador educacional que estima se a água de um copo parece **limpa** ou **suja** a partir de uma fotografia. O repositório reúne aquisição e auditoria de dados, histograma RGB, treino reproduzível do `modelo_agua`, API Flask, interface clássica e uma demonstração 3D cujo robô envia uma captura real da cena ao mesmo classificador.
 
 > **Aviso:** o sistema avalia somente aparência visual. Ele não comprova potabilidade nem segurança química ou microbiológica e não deve orientar consumo.
 
 ## Resultado atual
 
-O dataset preparado contém 61 amostras (23 `limpo`, 38 `sujo`) e 794 atributos. Em validação cruzada estratificada de cinco folds, o SVM venceu pelo critério definido previamente, F1 macro.
+O único modelo usado é `model/modelo_agua.pkl`: `Normalizer(l1)` → `SelectKBest(chi2, k=500)` → `GaussianNB`, treinado com scikit-learn 1.8.0 sobre 65 fotos (19 `limpo`, 46 `sujo`): as 50 originais do notebook do Colab mais as 15 fotos de celular em `data/raw/proprias/`. Métricas da validação cruzada estratificada de cinco folds:
 
-| Métrica do SVM | Média |
+| Métrica do Naive Bayes | Média |
 |---|---:|
-| F1 macro | 0,7642 |
-| Acurácia balanceada | 0,7846 |
-| Acurácia | 0,7705 |
-| F1 ponderado | 0,7720 |
+| F1 macro | 0,6991 |
+| Acurácia balanceada | 0,7189 |
+| Acurácia | 0,7538 |
+| F1 ponderado | 0,7504 |
 
-A matriz de confusão fora do treino foi `[[19, 4], [10, 28]]`, na ordem `limpo`, `sujo`. A variação entre folds é alta (desvio do F1 macro: 0,1608), portanto os números são preliminares, não uma validação de uso real.
+A matriz de confusão fora do treino foi `[[12, 7], [9, 37]]`, na ordem `limpo`, `sujo`; desvio do F1 macro entre folds: 0,0998. O conjunto é mais variado que as 50 originais, por isso o F1 não é comparável ao 0,81 anterior. Ainda há poucas fotos limpas (19 × 46): o modelo tende a responder `sujo`. 36 fotos do Wikimedia Commons (`data/raw/commons/`) ficam como `reserva`, fora do treino, porque são quase todas de água limpa e ensinavam "foto da internet = limpo".
 
 ## O que o projeto faz
 
 - valida extensão, MIME, assinatura, formato, dimensões e limite de pixels do upload;
 - corrige orientação EXIF, converte a imagem para RGB e extrai 768 bins de histograma normalizados;
-- acrescenta estatísticas de canal e brilho, totalizando 794 atributos versionados;
-- compara KNN, Decision Tree, Random Forest, Gaussian Naive Bayes, SVM, Logistic Regression e Gradient Boosting;
-- usa `StratifiedKFold(5, shuffle=True, random_state=42)` e seleciona pelo F1 macro;
-- gera CSV de métricas, gráficos, matriz de confusão, schema e metadados do experimento;
-- retreina apenas o vencedor com 100% dos dados depois da avaliação;
+- classifica com o `modelo_agua` (normalização L1, seleção de 500 atributos por qui-quadrado e Gaussian Naive Bayes);
+- avalia com `StratifiedKFold(5, shuffle=True, random_state=42)`, métrica principal F1 macro;
+- gera CSV de métricas, gráficos, matriz de confusão e metadados do experimento;
+- treina o `modelo_agua` com 100% dos dados depois da avaliação;
 - atende upload tradicional e uma cozinha 3D interativa pelo mesmo endpoint de inferência;
 - expõe dashboard experimental e API JSON versionada;
 - cataloga procedência, licença, revisão e hash das imagens externas;
@@ -60,8 +59,8 @@ python -m scripts.pipeline
 # Etapas independentes
 python -m scripts.audit_dataset
 python -m scripts.prepare_dataset
-python -m scripts.evaluate_models       # não substitui o modelo servido
-python -m scripts.train_final           # avalia e retreina o vencedor
+python train_model.py --evaluate-only   # só validação cruzada, não grava nada
+python -m scripts.train_final           # avalia e retreina model/modelo_agua.pkl
 ```
 
 Para importar novamente os candidatos selecionados do Wikimedia Commons é necessário acesso à internet:
@@ -84,7 +83,7 @@ python -m scripts.prepare_dataset
 
 ```bash
 curl -X POST http://127.0.0.1:5000/api/v1/predictions \
-  -F "image=@limpo2.jpg"
+  -F "image=@data/raw/proprias/limpo/limpo2.jpg"
 ```
 
 Resposta resumida:
@@ -94,7 +93,7 @@ Resposta resumida:
   "data": {
     "classification": "limpo",
     "confidence": 0.9012,
-    "model": "SVM",
+    "model": "Naive Bayes",
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
   }
 }
@@ -148,7 +147,7 @@ docs/                   arquitetura, API, dados, segurança e relatório
 - A base é pequena, desbalanceada e não representa condições variadas de iluminação, recipiente, câmera e tipos de contaminação.
 - Fotografias semelhantes podem induzir vazamento entre folds; o catálogo novo possui `group_id`, mas a base legada não.
 - Transparência ou cor não revela contaminantes invisíveis. O domínio do sistema é classificação visual binária, não potabilidade.
-- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado. Causa medida: para imagens fora do treino, a similaridade do kernel RBF com todos os vetores de suporte é ≈ 0 e o SVM devolve a saída do intercepto (~72% `limpo`), o que também ocorre com fotos reais novas.
+- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `data/raw/proprias/sujo/sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado. O Gaussian Naive Bayes sobre 500 bins produz probabilidades extremas (0 ou 1) e classifica como `sujo` fotos que se afastam das 50 do treino — inclusive `limpo2.jpg` e as fotos limpas de `data/raw`.
 
 ## Licenças e terceiros
 

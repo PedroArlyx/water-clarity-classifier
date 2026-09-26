@@ -9,17 +9,19 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pandas as pd
 
 from water_clarity.errors import ModelUnavailableError
 from water_clarity.ml.features import (
     CHANNELS,
+    FEATURE_SCHEMA_VERSION,
     HISTOGRAM_FEATURES,
     extract_features_from_image,
     read_limited,
     to_feature_vector,
     validate_image_bytes,
 )
-from water_clarity.settings import LEGACY_MODEL_PATH, MODEL_METADATA_PATH, MODEL_PATH
+from water_clarity.settings import MODEL_METADATA_PATH, WATER_MODEL_PATH
 
 VISUAL_ONLY_WARNING = (
     "Resultado baseado somente na aparência visual; não confirma potabilidade, "
@@ -77,33 +79,28 @@ def _pipeline_steps(pipeline) -> list[dict[str, str]]:
 
 
 class ModelService:
-    """Repositório lazy e thread-safe para o artefato confiável do projeto."""
+    """Repositório lazy e thread-safe para o artefato ``modelo_agua.pkl``."""
 
-    def __init__(self, model_path: Path = MODEL_PATH):
+    def __init__(self, model_path: Path = WATER_MODEL_PATH):
         self.model_path = model_path
         self._bundle: dict[str, object] | None = None
         self._lock = threading.Lock()
-
-    def _resolved_model_path(self) -> Path:
-        if self.model_path.exists():
-            return self.model_path
-        if self.model_path == MODEL_PATH and LEGACY_MODEL_PATH.exists():
-            return LEGACY_MODEL_PATH
-        raise ModelUnavailableError(
-            "Modelo não encontrado. Execute 'python train_model.py' antes de iniciar a aplicação."
-        )
 
     def bundle(self) -> dict[str, object]:
         if self._bundle is None:
             with self._lock:
                 if self._bundle is None:
+                    if not self.model_path.exists():
+                        raise ModelUnavailableError(
+                            "Modelo não encontrado. Execute 'python train_model.py' antes de iniciar a aplicação."
+                        )
                     try:
-                        loaded = joblib.load(self._resolved_model_path())
+                        loaded = joblib.load(self.model_path)
                     except Exception as exc:
                         raise ModelUnavailableError(
                             "O modelo não pôde ser carregado. Treine-o novamente no ambiente atual."
                         ) from exc
-                    required = {"pipeline", "label_encoder", "model_name", "feature_columns"}
+                    required = {"modelo", "colunas"}
                     if not isinstance(loaded, dict) or not required.issubset(loaded):
                         raise ModelUnavailableError("O artefato do modelo possui formato incompatível.")
                     self._bundle = loaded
@@ -118,10 +115,10 @@ class ModelService:
             return json.loads(MODEL_METADATA_PATH.read_text(encoding="utf-8"))
         bundle = self.bundle()
         return {
-            "artifact_format": "legacy",
-            "model_name": bundle["model_name"],
-            "feature_count": len(bundle["feature_columns"]),
-            "warning": "Artefato legado sem metadata.json; execute novamente o treinamento.",
+            "artifact_format": "modelo_agua",
+            "model_name": str(bundle.get("algoritmo", type(bundle["modelo"]).__name__)),
+            "feature_schema": {"count": len(bundle["colunas"])},
+            "warning": "metadata.json ausente; execute 'python train_model.py'.",
         }
 
     def predict_upload(self, stream, *, filename: str, declared_mime: str | None) -> Prediction:
@@ -133,27 +130,24 @@ class ModelService:
         )
         features, mean_rgb = extract_features_from_image(image)
         bundle = self.bundle()
-        columns = list(bundle["feature_columns"])
-        vector = np.asarray([to_feature_vector(features, columns)], dtype=float)
-        pipeline = bundle["pipeline"]
-        encoder = bundle["label_encoder"]
-        prediction = pipeline.predict(vector)[0]
-        label = str(encoder.inverse_transform([prediction])[0])
+        columns = list(bundle["colunas"])
+        vector = pd.DataFrame([to_feature_vector(features, columns)], columns=columns, dtype=float)
+        pipeline = bundle["modelo"]
+        label = str(pipeline.predict(vector)[0])
 
         confidence = None
         class_probabilities = None
         if hasattr(pipeline, "predict_proba"):
             probabilities = pipeline.predict_proba(vector)[0]
             confidence = round(float(np.max(probabilities)), 4)
-            class_labels = encoder.inverse_transform(getattr(pipeline, "classes_", np.arange(len(probabilities))))
             class_probabilities = {
-                str(name): round(float(value), 4) for name, value in zip(class_labels, probabilities)
+                str(name): round(float(value), 4) for name, value in zip(pipeline.classes_, probabilities, strict=True)
             }
 
         return Prediction(
             classification=label,
             confidence=confidence,
-            model=str(bundle["model_name"]),
+            model=str(bundle.get("algoritmo", type(pipeline).__name__)),
             mean_rgb=tuple(round(value, 2) for value in mean_rgb),
             image={
                 "width": image_info.width,
@@ -166,7 +160,7 @@ class ModelService:
                 "count": len(columns),
                 "histogram_count": len(HISTOGRAM_FEATURES),
                 "engineered_count": len(columns) - len(HISTOGRAM_FEATURES),
-                "schema_version": str(bundle.get("feature_schema_version", "legado")),
+                "schema_version": FEATURE_SCHEMA_VERSION,
             },
             pipeline=_pipeline_steps(pipeline),
             probabilities=class_probabilities,

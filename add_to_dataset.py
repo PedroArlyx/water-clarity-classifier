@@ -14,6 +14,7 @@ import argparse
 import csv
 import hashlib
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,7 +90,10 @@ def main(argv=None) -> int:
             continue
 
         suffix = ".jpg" if info.format == "JPEG" else f".{info.format.lower()}"
-        relative = Path("data") / "raw" / label / f"local-{digest[:16]}{suffix}"
+        stem = re.sub(r"[^a-z0-9-]+", "-", source.stem.lower()).strip("-") or "foto"
+        relative = Path("data") / "raw" / "proprias" / label / f"{stem}{suffix}"
+        if (PROJECT_ROOT / relative).exists():
+            relative = relative.with_name(f"{stem}-{digest[:8]}{suffix}")
         destination = PROJECT_ROOT / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)

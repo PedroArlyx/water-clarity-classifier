@@ -20,7 +20,7 @@ Escopo: backend Python/Flask e frontend JavaScript. A revisão considera uma apl
 
 ## S-04 — desserialização Joblib — médio — risco residual aceito
 
-**Evidência:** `water_clarity/ml/service.py` carrega `model/classifier.joblib` com Joblib. Artefatos Pickle/Joblib podem executar código durante a carga.
+**Evidência:** `water_clarity/ml/service.py` carrega `model/modelo_agua.pkl` com Joblib. Artefatos Pickle/Joblib podem executar código durante a carga.
 
 **Mitigação:** o caminho é fixo, não deriva da requisição e nenhum endpoint aceita modelo. O artefato deve vir somente deste pipeline/repositório e o acesso de escrita em produção deve ser restrito. Não carregue modelos baixados de fontes não confiáveis. Uma evolução possível é assinar o artefato e validar sua soma antes da carga.
 

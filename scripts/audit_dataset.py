@@ -66,7 +66,9 @@ def main() -> int:
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     with (REPORT_DIR / "approved_images.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=details[0].keys())
+        writer = csv.DictWriter(
+            handle, fieldnames=("file", "class", "width", "height", "format", "sha256", "group_id")
+        )
         writer.writeheader()
         writer.writerows(details)
     fields = ("file_a", "file_b", "hamming_distance", "same_group", "review_action")
@@ -79,6 +81,8 @@ def main() -> int:
         "approved": len(approved),
         "rejected": sum(row["review_status"] == "rejected" for row in rows),
         "pending": sum(row["review_status"] == "pending" for row in rows),
+        "reserva": sum(row["review_status"] == "reserva" for row in rows),
+        "holdout": sum(row["review_status"] == "holdout" for row in rows),
         "exact_duplicate_hashes": len(approved) - len({row["sha256"] for row in approved}),
         "near_duplicate_pairs_threshold_8": len(near_duplicates),
         "scope_limitation": "As 50 amostras legadas não possuem arquivos brutos para auditoria perceptual.",

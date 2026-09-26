@@ -7,27 +7,28 @@ Prefixo atual: `/api/v1`. Todas as falhas da API seguem `{"error":{"code":"...",
 Recebe `multipart/form-data` com o campo obrigatório `image`. Formatos aceitos: PNG, JPEG, WebP e BMP. Limites: 16 MB no corpo, 24 megapixels e 10 partes de formulário.
 
 ```bash
-curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@sujo19.jpg"
+curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/proprias/sujo/sujo19.jpg"
 ```
 
 ```json
 {
   "data": {
     "classification": "sujo",
-    "confidence": 0.9457,
-    "probabilities": {"limpo": 0.0543, "sujo": 0.9457},
-    "model": "SVM",
+    "confidence": 1.0,
+    "probabilities": {"limpo": 0.0, "sujo": 1.0},
+    "model": "Naive Bayes",
     "pipeline": [
-      {"name": "scaler", "estimator": "StandardScaler"},
-      {"name": "classifier", "estimator": "SVC"}
+      {"name": "normalizar", "estimator": "Normalizer"},
+      {"name": "selecionar", "estimator": "SelectKBest"},
+      {"name": "modelo", "estimator": "GaussianNB"}
     ],
     "features": {
       "mean_rgb": [115.21, 130.4, 127.33],
       "histogram": {"r": [0.0, "... 32 faixas"], "g": ["..."], "b": ["..."]},
-      "count": 794,
+      "count": 768,
       "histogram_count": 768,
-      "engineered_count": 26,
-      "schema_version": "rgb-histogram-stats-v2"
+      "engineered_count": 0,
+      "schema_version": "rgb-histogram-v1"
     },
     "image": {"format": "JPEG", "height": 3000, "width": 4000, "mime_type": "image/jpeg"},
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."

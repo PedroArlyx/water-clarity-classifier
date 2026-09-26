@@ -5,7 +5,7 @@
 <section class="page-hero shell">
     <p class="kicker">Modo clássico · requisito da atividade</p>
     <h1>A aparência da água, interpretada por RGB.</h1>
-    <p class="lead">Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai histogramas de cor e o modelo vencedor classifica a aparência como limpa ou suja.</p>
+    <p class="lead">Envie uma fotografia de um copo. O mesmo pipeline avaliado no experimento extrai histogramas de cor e o modelo_agua classifica a aparência como limpa ou suja.</p>
     <div class="notice" role="note">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 20h18.4L12 3.5Zm0 6v4.5m0 3v.1"/></svg>
         <span>Esta análise é apenas visual e não substitui testes químicos ou microbiológicos.</span>
@@ -72,7 +72,7 @@
                     <li>A fotografia é validada (extensão, MIME, assinatura, dimensões) e convertida para RGB.</li>
                     <li>São extraídos 768 valores de histograma (3 canais × 256 níveis) e 26 estatísticas de cor.</li>
                     <li>As características seguem o mesmo schema usado no treinamento.</li>
-                    <li>O pipeline do modelo vencedor (<span id="result-steps">normalização + classificador</span>) produz a classificação.</li>
+                    <li>O pipeline do modelo_agua (<span id="result-steps">normalização + classificador</span>) produz a classificação.</li>
                 </ol>
             </details>
             <p id="result-warning" class="result-warning">{{ result.warning if result else '' }}</p>
@@ -90,7 +90,7 @@
         <li><strong>RGB</strong><small>3 canais × 256 níveis</small></li>
         <li><strong>Features</strong><small>histogramas + estatísticas</small></li>
         <li><strong>Normalização</strong><small>schema do treino</small></li>
-        <li><strong>Modelo</strong><small>algoritmo vencedor</small></li>
+        <li><strong>Modelo</strong><small>modelo_agua</small></li>
         <li><strong>Resultado</strong><small>aparência visual</small></li>
     </ol>
     <div class="cta-3d">

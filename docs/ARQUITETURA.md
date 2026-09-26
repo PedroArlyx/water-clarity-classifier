@@ -7,8 +7,8 @@ flowchart LR
     U[Usuário] --> UI[Upload clássico ou cozinha 3D]
     UI --> API[Flask /api/v1/predictions]
     API --> V[Validação segura da imagem]
-    V --> F[Extração RGB v2]
-    F --> M[Pipeline SVM carregado uma vez]
+    V --> F[Histograma RGB 768 bins]
+    F --> M[modelo_agua.pkl carregado uma vez]
     M --> R[Classe, confiança e aviso]
     META[metadata.json] --> DASH[Dashboard experimental]
     CSV[resultados_avaliacao.csv] --> DASH
@@ -27,9 +27,7 @@ flowchart TD
     D --> E[res.csv + hash]
     E --> F[Limpeza e validação]
     F --> G[768 histogramas normalizados]
-    G --> H[26 estatísticas RGB/brilho]
-    H --> I[794 atributos]
-    I --> J[Mineração e interpretação]
+    G --> J[Mineração e interpretação]
 ```
 
 ## Treinamento e seleção
@@ -37,20 +35,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     X[Dataset preparado] --> CV[StratifiedKFold 5x, seed 42]
-    CV --> K[KNN]
-    CV --> DT[Decision Tree]
-    CV --> RF[Random Forest]
-    CV --> NB[Naive Bayes]
-    CV --> SVM[SVM]
-    CV --> LR[Logistic Regression]
-    CV --> GB[Gradient Boosting]
-    K & DT & RF & NB & SVM & LR & GB --> SEL[Ordenação por F1 macro]
-    SEL --> OOF[Predições out-of-fold e matriz]
-    SEL --> FINAL[Clone do vencedor treinado em 100%]
-    FINAL --> ART[classifier.joblib]
+    CV --> P[Normalizer L1 → SelectKBest chi2 k=500 → GaussianNB]
+    P --> OOF[Predições out-of-fold e matriz]
+    P --> FINAL[Modelo treinado em 100%]
+    FINAL --> ART[modelo_agua.pkl]
 ```
 
-Escalonamento pertence ao `Pipeline` somente para modelos sensíveis à escala. Árvores recebem atributos sem `StandardScaler`. A avaliação nunca mede o modelo final já ajustado em todas as linhas.
+`train_model.py` treina apenas o `modelo_agua`. A avaliação nunca mede o modelo final já ajustado em todas as linhas.
 
 ## Fluxo de inferência
 
@@ -65,7 +56,7 @@ sequenceDiagram
     A->>V: bytes, nome, MIME
     V-->>A: RGB sanitizado
     A->>F: imagem RGB
-    F-->>A: vetor v2 com 794 valores
+    F-->>A: vetor com 768 bins RGB
     A->>M: predict + predict_proba
     M-->>A: classe e confiança
     A-->>C: JSON + aviso visual
@@ -107,7 +98,7 @@ Módulos em `static/js/experience/` (ES modules nativos, carregados só após "I
 
 **Separação entre aparência e decisão.** O seletor "Água da torneira" altera apenas o material renderizado. A câmera fixa da estação de visão (fundo com backlight, como em inspeção de líquidos) renderiza sempre 512×512 com pixel ratio 1 — independentemente da qualidade gráfica — e o PNG segue para o mesmo endpoint do upload. Nenhum rótulo é enviado. O modo "Minha foto" envia a fotografia do usuário no lugar da captura.
 
-**Limitação observada do modelo atual.** Para imagens distantes do conjunto de treino, o SVM RBF devolve praticamente a mesma saída (a similaridade de kernel com todos os vetores de suporte é ≈ 0, restando o intercepto: ~72% "limpo"). Isso ocorre com as capturas 3D (limpa e turva) e também com fotos reais fora do treino. A demonstração mostra esse resultado honestamente; para o cenário de alerta use o modo "Minha foto" com uma imagem que o modelo reconhece como suja (ex.: `sujo19.jpg`).
+**Limitação observada do modelo atual.** O Gaussian Naive Bayes sobre 500 bins produz probabilidades extremas (0 ou 1) e tende a devolver "sujo" para imagens que se afastam das fotos do treino, inclusive fotos limpas fora do cenário do treino. A demonstração mostra esse resultado honestamente; para o cenário de alerta use o modo "Minha foto" com uma imagem que o modelo reconhece como suja (ex.: `sujo19.jpg`).
 
 ## Organização
 

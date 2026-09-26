@@ -18,12 +18,11 @@ from water_clarity.ml.features import (
 def test_histograms_are_normalized_and_schema_is_complete():
     image = Image.new("RGB", (10, 10), color=(10, 20, 30))
     features, means = extract_features_from_image(image)
-    assert len(FEATURE_COLUMNS) == 794
-    assert set(FEATURE_COLUMNS).issubset(features)
+    assert len(FEATURE_COLUMNS) == 768
+    assert set(features) == set(FEATURE_COLUMNS)
     for channel in "rgb":
         assert sum(features[f"{channel}{index}"] for index in range(256)) == pytest.approx(1.0)
     assert means == pytest.approx((10.0, 20.0, 30.0))
-    assert features["brightness"] == pytest.approx(18.596)
 
 
 def test_histogram_feature_order_remains_rgb_baseline():

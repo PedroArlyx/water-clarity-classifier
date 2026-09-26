@@ -1,4 +1,4 @@
-"""Validação de imagens e extração reproduzível de características RGB."""
+"""Validação de imagens e extração do histograma RGB (768 bins) usado pelo modelo_agua."""
 
 from __future__ import annotations
 
@@ -23,17 +23,8 @@ from water_clarity.settings import (
 
 CHANNELS = ("r", "g", "b")
 HISTOGRAM_FEATURES = tuple(f"{channel}{index}" for channel in CHANNELS for index in range(256))
-STATISTICS = ("mean", "std", "p10", "p25", "median", "p75", "p90")
-STATISTICAL_FEATURES = tuple(f"{channel}_{stat}" for channel in CHANNELS for stat in STATISTICS)
-CROSS_CHANNEL_FEATURES = (
-    "brightness",
-    "rg_difference",
-    "rb_difference",
-    "gb_difference",
-    "channel_mean_spread",
-)
-FEATURE_SCHEMA_VERSION = "rgb-histogram-stats-v2"
-FEATURE_COLUMNS = HISTOGRAM_FEATURES + STATISTICAL_FEATURES + CROSS_CHANNEL_FEATURES
+FEATURE_SCHEMA_VERSION = "rgb-histogram-v1"
+FEATURE_COLUMNS = HISTOGRAM_FEATURES
 EXTENSION_FORMATS = {
     "png": "PNG",
     "jpg": "JPEG",
@@ -142,53 +133,6 @@ def validate_image_bytes(
     return image, ImageInfo(width, height, detected_format, actual_mime)
 
 
-def _percentile_from_histogram(histogram: np.ndarray, percentile: float) -> float:
-    cumulative = np.cumsum(histogram)
-    if cumulative[-1] <= 0:
-        return 0.0
-    position = percentile * cumulative[-1]
-    return float(np.searchsorted(cumulative, position, side="left"))
-
-
-def _normalized_histogram(values: np.ndarray) -> np.ndarray:
-    values = np.asarray(values, dtype=float)
-    total = float(values.sum())
-    if total <= 0:
-        raise ValueError("Histograma RGB com soma zero.")
-    return values / total
-
-
-def augment_histogram_features(features: Mapping[str, float]) -> dict[str, float]:
-    """Calcula estatísticas deriváveis dos histogramas, sem quebrar treino/inferência."""
-    augmented: dict[str, float] = {name: float(features[name]) for name in HISTOGRAM_FEATURES}
-    intensities = np.arange(256, dtype=float)
-    means: dict[str, float] = {}
-
-    for channel in CHANNELS:
-        histogram = _normalized_histogram(
-            np.array([augmented[f"{channel}{index}"] for index in range(256)], dtype=float)
-        )
-        for index, value in enumerate(histogram):
-            augmented[f"{channel}{index}"] = float(value)
-        mean = float(histogram @ intensities)
-        variance = float(histogram @ ((intensities - mean) ** 2))
-        means[channel] = mean
-        augmented[f"{channel}_mean"] = mean
-        augmented[f"{channel}_std"] = variance**0.5
-        augmented[f"{channel}_p10"] = _percentile_from_histogram(histogram, 0.10)
-        augmented[f"{channel}_p25"] = _percentile_from_histogram(histogram, 0.25)
-        augmented[f"{channel}_median"] = _percentile_from_histogram(histogram, 0.50)
-        augmented[f"{channel}_p75"] = _percentile_from_histogram(histogram, 0.75)
-        augmented[f"{channel}_p90"] = _percentile_from_histogram(histogram, 0.90)
-
-    augmented["brightness"] = 0.2126 * means["r"] + 0.7152 * means["g"] + 0.0722 * means["b"]
-    augmented["rg_difference"] = means["r"] - means["g"]
-    augmented["rb_difference"] = means["r"] - means["b"]
-    augmented["gb_difference"] = means["g"] - means["b"]
-    augmented["channel_mean_spread"] = max(means.values()) - min(means.values())
-    return augmented
-
-
 def extract_features_from_image(image: Image.Image) -> tuple[dict[str, float], tuple[float, float, float]]:
     rgb = image.convert("RGB")
     array = np.asarray(rgb)
@@ -204,11 +148,7 @@ def extract_features_from_image(image: Image.Image) -> tuple[dict[str, float], t
         )
         means.append(float(channel_values.mean()))
 
-    return augment_histogram_features(histogram_features), tuple(means)  # type: ignore[return-value]
-
-
-def features_from_histogram_row(row: Mapping[str, float]) -> dict[str, float]:
-    return augment_histogram_features({name: float(row[name]) for name in HISTOGRAM_FEATURES})
+    return histogram_features, tuple(means)  # type: ignore[return-value]
 
 
 def to_feature_vector(features: Mapping[str, float], columns: list[str] | tuple[str, ...]) -> list[float]:
@@ -217,18 +157,3 @@ def to_feature_vector(features: Mapping[str, float], columns: list[str] | tuple[
         raise ValueError(f"Schema incompatível; atributos ausentes: {missing[:5]}")
     return [float(features[column]) for column in columns]
 
-
-def schema_document() -> dict[str, object]:
-    return {
-        "version": FEATURE_SCHEMA_VERSION,
-        "feature_count": len(FEATURE_COLUMNS),
-        "features": list(FEATURE_COLUMNS),
-        "baseline": {
-            "description": "Histogramas RGB normalizados, 256 bins por canal.",
-            "features": list(HISTOGRAM_FEATURES),
-        },
-        "engineered": {
-            "description": "Estatísticas derivadas exclusivamente dos histogramas RGB.",
-            "features": list(STATISTICAL_FEATURES + CROSS_CHANNEL_FEATURES),
-        },
-    }

@@ -10,7 +10,6 @@ from water_clarity.errors import WaterClarityError
 from water_clarity.ml.service import model_service
 from water_clarity.settings import (
     CLASS_DISTRIBUTION_PATH,
-    COMPARISON_CHART_PATH,
     CONFUSION_MATRIX_PATH,
     RESULTS_PATH,
 )
@@ -84,13 +83,13 @@ def _confusion(metadata: dict) -> dict[str, object] | None:
         return None
     peak = max(max(row) for row in matrix) or 1
     rows = []
-    for label, values in zip(labels, matrix):
+    for label, values in zip(labels, matrix, strict=True):
         total = sum(values) or 1
         rows.append({
             "label": label,
             "cells": [
                 {"count": count, "share": count / total, "level": 0 if count == 0 else min(5, 1 + int(4 * count / peak)), "hit": label == column}
-                for column, count in zip(labels, values)
+                for column, count in zip(labels, values, strict=True)
             ],
         })
     return {"labels": labels, "rows": rows, "total": sum(sum(row) for row in matrix)}
@@ -145,11 +144,6 @@ def experiment():
         confusion=_confusion(metadata),
         winner_row=next((row for row in metrics if row.get("modelo") == winner), None),
     )
-
-
-@web.get("/artefatos/comparacao-modelos.png")
-def comparison_chart():
-    return send_file(COMPARISON_CHART_PATH, mimetype="image/png", conditional=True)
 
 
 @web.get("/artefatos/matriz-confusao.png")

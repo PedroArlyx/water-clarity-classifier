@@ -125,7 +125,7 @@ def main() -> int:
     pages = _query_many(all_titles)
 
     for proposed_class, titles in CANDIDATES.items():
-        destination_dir = PROJECT_ROOT / "data" / "raw" / proposed_class
+        destination_dir = PROJECT_ROOT / "data" / "raw" / "commons" / proposed_class
         destination_dir.mkdir(parents=True, exist_ok=True)
         for title in titles:
             page = pages.get(title)
@@ -148,7 +148,7 @@ def main() -> int:
             suffix = Path(urllib.parse.urlparse(source_url).path).suffix.lower() or ".jpg"
             if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
                 suffix = ".jpg"
-            relative = Path("data") / "raw" / proposed_class / f"commons-{digest[:16]}{suffix}"
+            relative = Path("data") / "raw" / "commons" / proposed_class / f"commons-{digest[:16]}{suffix}"
             destination = PROJECT_ROOT / relative
             destination.write_bytes(content)
             artist = _plain(metadata.get("Artist", {}).get("value", "Wikimedia Commons contributor"))
