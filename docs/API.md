@@ -16,19 +16,17 @@ curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/propri
     "classification": "sujo",
     "confidence": 1.0,
     "probabilities": {"limpo": 0.0, "sujo": 1.0},
-    "model": "Naive Bayes",
+    "model": "Regressão logística",
     "pipeline": [
-      {"name": "normalizar", "estimator": "Normalizer"},
-      {"name": "selecionar", "estimator": "SelectKBest"},
-      {"name": "modelo", "estimator": "GaussianNB"}
+      {"name": "padronizar", "estimator": "StandardScaler"},
+      {"name": "modelo", "estimator": "LogisticRegression"}
     ],
     "features": {
       "mean_rgb": [115.21, 130.4, 127.33],
       "histogram": {"r": [0.0, "... 32 faixas"], "g": ["..."], "b": ["..."]},
-      "count": 768,
-      "histogram_count": 768,
-      "engineered_count": 0,
-      "schema_version": "rgb-histogram-v1"
+      "count": 19,
+      "center_fraction": 0.5,
+      "schema_version": "cor-do-centro-v1"
     },
     "image": {"format": "JPEG", "height": 3000, "width": 4000, "mime_type": "image/jpeg"},
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
@@ -38,8 +36,8 @@ curl -X POST http://127.0.0.1:5000/api/v1/predictions -F "image=@data/raw/propri
 
 Campos adicionados na etapa visual (aditivos, sem quebrar clientes):
 
-- `features.histogram` — os 256 bins normalizados de cada canal, **extraídos pelo servidor**, agrupados em 32 faixas (cada faixa é a soma de 8 bins; cada canal soma 1). Usado no histograma da interface.
-- `features.count`, `histogram_count`, `engineered_count`, `schema_version` — tamanho real do vetor enviado ao modelo.
+- `features.histogram` — os 256 bins normalizados de cada canal da foto inteira, **extraídos pelo servidor**, agrupados em 32 faixas (cada faixa é a soma de 8 bins; cada canal soma 1). Só para o gráfico da interface; o modelo usa a cor do centro.
+- `features.count`, `center_fraction`, `schema_version` — tamanho do vetor enviado ao modelo (atributos de cor do centro) e fração recortada.
 - `pipeline` — etapas reais do `sklearn.Pipeline` carregado (ex.: normalização + classificador). Nenhum nome de algoritmo é fixo no frontend.
 - `probabilities` — `predict_proba` por classe, na ordem de `classes_` do pipeline.
 

@@ -206,8 +206,8 @@ function fillSheet() {
     const nodes = [
         ["Imagem", prediction.image ? `${prediction.image.width}×${prediction.image.height} · ${prediction.image.format}` : ""],
         ["RGB", features.mean_rgb.map((value) => formatNumber(value)).join(" · ")],
-        [`${features.histogram_count ?? 768} histograma`, "3 × 256 bins normalizados"],
-        [`${features.count ?? "—"} features`, features.engineered_count ? `+ ${features.engineered_count} estatísticas RGB` : ""],
+        ["Centro da foto", `recorte de ${Math.round((features.center_fraction ?? 0.5) * 100)}% onde fica o copo`],
+        [`${features.count ?? "—"} features`, "saturação, brilho e cromaticidade"],
     ];
     for (const step of prediction.pipeline || []) {
         const label = step.estimator === "StandardScaler" ? "Normalização" : step.estimator;

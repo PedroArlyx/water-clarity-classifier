@@ -14,6 +14,8 @@ RESULTS_PATH = PROJECT_ROOT / "resultados_avaliacao.csv"
 CONFUSION_MATRIX_PATH = PROJECT_ROOT / "matriz_confusao.png"
 CLASS_DISTRIBUTION_PATH = PROJECT_ROOT / "distribuicao_classes.png"
 DATASET_PATH = PROJECT_ROOT / "res.csv"
+CATALOG_PATH = PROJECT_ROOT / "data" / "metadata" / "images.csv"
+REPORTS_DIR = PROJECT_ROOT / "data" / "reports"
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 16 * 1024 * 1024))
 MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", 20_000_000))

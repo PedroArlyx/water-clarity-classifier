@@ -1,18 +1,27 @@
-"""Treina o modelo_agua: classificação visual de água (limpo/sujo) por histograma RGB.
+"""Treina o modelo_agua: classificação visual de água (limpo/sujo) pela cor do centro da foto.
 
-Receita do modelo (a mesma do artefato ``modelo_agua.pkl``):
+Receita do modelo (artefato ``modelo_agua.pkl``):
 
-* ``Normalizer(norm="l1")`` sobre os 768 bins RGB;
-* ``SelectKBest(chi2, k=500)`` — seleção de atributos por qui-quadrado;
-* ``GaussianNB`` — Naive Bayes.
+* recorte central (50% da largura e da altura), onde normalmente está o copo;
+* 19 estatísticas de cor desse recorte: saturação, brilho e cromaticidade
+  (``water_clarity.ml.features.center_color_features``);
+* ``StandardScaler`` + ``LogisticRegression`` com classes balanceadas.
 
-Avaliação e treinamento final são fases distintas: a validação cruzada estima o
-desempenho e, só depois, o modelo é ajustado com 100% das amostras.
+O histograma da foto inteira, usado antes, era dominado pelo fundo: em fotos nunca
+vistas o modelo antigo acertou 1 de 5 fotos limpas; esta abordagem acertou 5 de 5.
+
+Os dados vêm das imagens aprovadas em ``data/metadata/images.csv``. As 50 linhas de
+``res.csv.bak`` não são usadas: existem só como histogramas, sem a foto para recortar.
+
+Avaliação e treinamento final são fases distintas: a validação cruzada agrupada
+(fotos da mesma sessão/fonte nunca ficam no treino e no teste ao mesmo tempo)
+estima o desempenho e, só depois, o modelo é ajustado com 100% das imagens.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import os
@@ -35,7 +44,8 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.feature_selection import SelectKBest, chi2
+from PIL import Image, ImageOps
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     classification_report,
@@ -44,18 +54,24 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_predict, cross_validate
-from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import StratifiedGroupKFold, cross_val_predict, cross_validate
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import StandardScaler
 
-from water_clarity.ml.features import FEATURE_SCHEMA_VERSION, HISTOGRAM_FEATURES
+from water_clarity.ml.features import (
+    CENTER_COLOR_FEATURES,
+    CENTER_FRACTION,
+    FEATURE_SCHEMA_VERSION,
+    center_color_features,
+)
 from water_clarity.ml.service import VISUAL_ONLY_WARNING
 from water_clarity.settings import (
+    CATALOG_PATH,
     CLASS_DISTRIBUTION_PATH,
     CONFUSION_MATRIX_PATH,
-    DATASET_PATH,
     MODEL_METADATA_PATH,
+    PROJECT_ROOT,
+    REPORTS_DIR,
     RESULTS_PATH,
     WATER_MODEL_PATH,
 )
@@ -63,10 +79,9 @@ from water_clarity.settings import (
 RANDOM_SEED = 42
 N_SPLITS = 5
 PRIMARY_METRIC = "f1_macro"
-K_FEATURES = 500
-MODEL_NAME = "Naive Bayes"
-TARGET_ALIASES = ("classe", "class", "label", "rotulo", "target", "y")
+MODEL_NAME = "Regressão logística"
 DIRTY_LABEL = "sujo"
+OWN_PHOTOS_PREFIX = "data/raw/proprias/"
 
 
 def sha256_file(path: Path) -> str:
@@ -77,46 +92,49 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def find_column(columns, aliases=TARGET_ALIASES):
-    normalized = {str(column).lower().strip(): column for column in columns}
-    return next((normalized[alias] for alias in aliases if alias in normalized), None)
+def load_dataset(path: Path = CATALOG_PATH) -> pd.DataFrame:
+    """Imagens aprovadas do catálogo, com hash conferido."""
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = [row for row in csv.DictReader(handle) if row["review_status"] == "approved"]
+    for row in rows:
+        file = PROJECT_ROOT / row["file"]
+        if not file.exists():
+            raise FileNotFoundError(f"Imagem aprovada ausente: {row['file']}")
+        if sha256_file(file) != row["sha256"]:
+            raise ValueError(f"Hash divergente: {row['file']}")
+    frame = pd.DataFrame(rows)
+    print(f"[1] Seleção: {len(frame)} imagens aprovadas em {path.relative_to(PROJECT_ROOT)}")
+    print(frame["class"].value_counts().to_string())
+    return frame
 
 
-def load_dataset(path: Path = DATASET_PATH):
-    frame = pd.read_csv(path)
-    target = find_column(frame.columns)
-    if target is None:
-        raise ValueError("A coluna alvo não foi encontrada no dataset.")
-    missing = [column for column in HISTOGRAM_FEATURES if column not in frame.columns]
-    if missing:
-        raise ValueError(f"Dataset incompatível; atributos RGB ausentes: {missing[:5]}")
-    print(f"[1] Seleção: {len(frame)} linhas, {len(HISTOGRAM_FEATURES)} bins RGB, alvo '{target}'")
-    print(frame[target].value_counts().to_string())
-    return frame, list(HISTOGRAM_FEATURES), target
+def _open_rgb(path: Path) -> Image.Image:
+    with Image.open(path) as source:
+        return ImageOps.exif_transpose(source).convert("RGB")
 
 
-def preprocess(frame: pd.DataFrame, feature_columns: list[str], target: str):
-    before = len(frame)
-    clean = frame.dropna(subset=feature_columns + [target]).drop_duplicates().copy()
-    removed = before - len(clean)
-    y = clean[target].astype(str).str.strip().str.lower().to_numpy()
+def preprocess(frame: pd.DataFrame):
+    y = frame["class"].astype(str).str.strip().str.lower().to_numpy()
     if len(set(y)) != 2:
-        raise ValueError("O pipeline exige exatamente duas classes após a limpeza.")
-    if min(pd.Series(y).value_counts()) < N_SPLITS:
-        raise ValueError(f"Cada classe precisa ter pelo menos {N_SPLITS} amostras.")
-    X = clean[feature_columns].astype(float)
-
-    print(f"[2] Pré-processamento: {removed} linha(s) removida(s)")
-    print(f"[3] Transformação: schema {FEATURE_SCHEMA_VERSION}, {X.shape[1]} atributos")
-    return X, y
+        raise ValueError("O pipeline exige exatamente duas classes.")
+    groups = frame["group_id"].to_numpy()
+    for label in set(y):
+        if len(set(groups[y == label])) < N_SPLITS:
+            raise ValueError(f"A classe '{label}' precisa de pelo menos {N_SPLITS} grupos/sessões distintos.")
+    X = pd.DataFrame(
+        [center_color_features(_open_rgb(PROJECT_ROOT / file)) for file in frame["file"]],
+        columns=list(CENTER_COLOR_FEATURES),
+    )
+    print(f"[2] Pré-processamento: {len(set(groups))} grupos (sessões/fontes) distintos")
+    print(f"[3] Transformação: schema {FEATURE_SCHEMA_VERSION}, {X.shape[1]} atributos do centro da foto")
+    return X, y, groups
 
 
 def build_model() -> Pipeline:
     return Pipeline(
         [
-            ("normalizar", Normalizer(norm="l1")),
-            ("selecionar", SelectKBest(score_func=chi2, k=K_FEATURES)),
-            ("modelo", GaussianNB()),
+            ("padronizar", StandardScaler()),
+            ("modelo", LogisticRegression(max_iter=5000, class_weight="balanced", C=0.5)),
         ]
     )
 
@@ -132,25 +150,46 @@ def _scoring() -> dict[str, object]:
     }
 
 
-def evaluate_model(X: pd.DataFrame, y: np.ndarray):
-    cv = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_SEED)
-    print(f"[4] Mineração: {MODEL_NAME}, CV estratificada {N_SPLITS}-fold")
-    scores = cross_validate(build_model(), X, y, cv=cv, scoring=_scoring())
+def evaluate_model(X: pd.DataFrame, y: np.ndarray, groups: np.ndarray):
+    cv = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_SEED)
+    print(f"[4] Mineração: {MODEL_NAME}, CV estratificada agrupada {N_SPLITS}-fold")
+    scores = cross_validate(build_model(), X, y, groups=groups, cv=cv, scoring=_scoring())
     row: dict[str, object] = {"modelo": MODEL_NAME}
     for metric in _scoring():
         values = scores[f"test_{metric}"]
         row[metric] = float(values.mean())
         row[f"{metric}_std"] = float(values.std(ddof=1))
 
-    predictions = cross_val_predict(build_model(), X, y, cv=cv)
+    predictions = cross_val_predict(build_model(), X, y, groups=groups, cv=cv)
     labels = sorted(set(y))
     matrix = confusion_matrix(y, predictions, labels=labels)
     report = classification_report(y, predictions, labels=labels, output_dict=True, zero_division=0)
-    print(
-        f"  {MODEL_NAME} macro_f1={row['f1_macro']:.4f} "
-        f"balanced_acc={row['balanced_accuracy']:.4f}"
-    )
+    print(f"  {MODEL_NAME} macro_f1={row['f1_macro']:.4f} balanced_acc={row['balanced_accuracy']:.4f}")
     return pd.DataFrame([row]), matrix, labels, report
+
+
+def evaluate_unseen_own_photos(frame: pd.DataFrame, X: pd.DataFrame, y: np.ndarray, groups: np.ndarray) -> dict:
+    """Deixa cada sessão de fotos próprias de fora uma vez: mede o acerto em fotos nunca vistas."""
+    own = frame["file"].str.startswith(OWN_PHOTOS_PREFIX).to_numpy()
+    rows = []
+    for group in sorted(set(groups[own])):
+        test = groups == group
+        model = build_model().fit(X[~test], y[~test])
+        for file, label, prediction in zip(frame["file"][test], y[test], model.predict(X[test]), strict=True):
+            rows.append({"arquivo": file, "classe": label, "previsto": prediction})
+    result = pd.DataFrame(rows)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    result.to_csv(REPORTS_DIR / "fotos_nunca_vistas.csv", index=False)
+    summary = {
+        label: {
+            "hits": int((result["previsto"][result["classe"] == label] == label).sum()),
+            "total": int((result["classe"] == label).sum()),
+        }
+        for label in sorted(result["classe"].unique())
+    }
+    text = "  ".join(f"{label} {v['hits']}/{v['total']}" for label, v in summary.items())
+    print(f"[5] Fotos próprias nunca vistas (uma sessão de fora por vez): {text}")
+    return summary
 
 
 def plot_class_distribution(y: np.ndarray) -> None:
@@ -158,8 +197,8 @@ def plot_class_distribution(y: np.ndarray) -> None:
     figure, axis = plt.subplots(figsize=(6, 4.5))
     bars = axis.bar(counts.index, counts.values, color=("#22a98b", "#d1844c"))
     axis.bar_label(bars, padding=3)
-    axis.set_ylabel("Amostras")
-    axis.set_title("Distribuição das classes no dataset preparado")
+    axis.set_ylabel("Imagens")
+    axis.set_title("Distribuição das classes no treino")
     axis.set_ylim(0, max(counts.values) * 1.18)
     axis.grid(axis="y", alpha=0.2)
     figure.tight_layout()
@@ -184,48 +223,55 @@ def _library_versions() -> dict[str, str]:
 
 def build_metadata(
     *,
+    frame: pd.DataFrame,
     y: np.ndarray,
     results: pd.DataFrame,
     matrix: np.ndarray,
     labels: list[str],
     report: dict,
+    unseen: dict,
 ) -> dict[str, object]:
     row = results.iloc[0]
+    own = frame["file"].str.startswith(OWN_PHOTOS_PREFIX)
     return {
         "artifact_format": "modelo_agua",
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "model_name": MODEL_NAME,
         "model_details": {
             "file": WATER_MODEL_PATH.name,
-            "form": "B: seleção de atributos",
-            "feature_selection": "Qui-quadrado",
-            "k": K_FEATURES,
+            "form": "Cor do centro da foto",
+            "feature_selection": f"recorte central de {CENTER_FRACTION:.0%} da largura e da altura",
+            "k": len(CENTER_COLOR_FEATURES),
             "pipeline": [name for name, _ in build_model().steps],
         },
         "primary_metric": PRIMARY_METRIC,
         "random_seed": RANDOM_SEED,
         "cross_validation": {
-            "strategy": "StratifiedKFold",
+            "strategy": "StratifiedGroupKFold",
             "n_splits": N_SPLITS,
             "shuffle": True,
+            "groups": "group_id do catálogo (sessão de fotos ou página do Commons)",
             "selection_metric": PRIMARY_METRIC,
         },
         "dataset": {
-            "path": DATASET_PATH.name,
-            "sha256": sha256_file(DATASET_PATH),
+            "path": CATALOG_PATH.relative_to(PROJECT_ROOT).as_posix(),
+            "sha256": sha256_file(CATALOG_PATH),
             "samples": int(len(y)),
+            "own_photos": int(own.sum()),
+            "commons_photos": int((~own).sum()),
             "class_distribution": {str(k): int(v) for k, v in pd.Series(y).value_counts().items()},
         },
         "feature_schema": {
             "version": FEATURE_SCHEMA_VERSION,
-            "count": len(HISTOGRAM_FEATURES),
-            "baseline_rgb_histogram_count": len(HISTOGRAM_FEATURES),
+            "count": len(CENTER_COLOR_FEATURES),
+            "features": list(CENTER_COLOR_FEATURES),
         },
         "evaluation": {
             "winner_metrics": {key: float(row[key]) for key in _scoring()},
             "confusion_matrix": matrix.tolist(),
             "labels": labels,
             "classification_report": report,
+            "unseen_own_photos": unseen,
         },
         "runtime": {
             "python": platform.python_version(),
@@ -262,17 +308,17 @@ def _atomic_joblib_dump(payload: object, destination: Path) -> None:
 
 
 def train_final_model(X: pd.DataFrame, y: np.ndarray, results: pd.DataFrame, report: dict) -> None:
-    print(f"[6] Modelo final: treinando {MODEL_NAME} com 100% do dataset")
+    print(f"[6] Modelo final: treinando {MODEL_NAME} com 100% das imagens")
     pipeline = build_model().fit(X, y)
     row = results.iloc[0]
     _atomic_joblib_dump(
         {
             "modelo": pipeline,
             "colunas": list(X.columns),
+            "extrator": "cor_do_centro",
+            "fracao_centro": CENTER_FRACTION,
             "algoritmo": MODEL_NAME,
-            "forma": "B: seleção de atributos",
-            "selecao": "Qui-quadrado",
-            "k": K_FEATURES,
+            "forma": "Cor do centro da foto",
             "metricas": {
                 "acuracia": float(row["accuracy"]),
                 "acuracia_bal": float(row["balanced_accuracy"]),
@@ -287,11 +333,13 @@ def train_final_model(X: pd.DataFrame, y: np.ndarray, results: pd.DataFrame, rep
 
 
 def run_pipeline(*, evaluate_only: bool = False) -> dict[str, object]:
-    frame, feature_columns, target = load_dataset(DATASET_PATH)
-    X, y = preprocess(frame, feature_columns, target)
-    results, matrix, labels, report = evaluate_model(X, y)
-    print(f"[5] Avaliação: {MODEL_NAME}, macro F1={results.iloc[0][PRIMARY_METRIC]:.4f}")
-    metadata = build_metadata(y=y, results=results, matrix=matrix, labels=labels, report=report)
+    frame = load_dataset()
+    X, y, groups = preprocess(frame)
+    results, matrix, labels, report = evaluate_model(X, y, groups)
+    unseen = evaluate_unseen_own_photos(frame, X, y, groups)
+    metadata = build_metadata(
+        frame=frame, y=y, results=results, matrix=matrix, labels=labels, report=report, unseen=unseen
+    )
     if evaluate_only:
         return metadata
 
@@ -308,7 +356,7 @@ def main() -> int:
     parser.add_argument(
         "--evaluate-only",
         action="store_true",
-        help="executa a validação cruzada sem gravar artefatos nem substituir modelo_agua.pkl",
+        help="executa a validação sem gravar artefatos nem substituir modelo_agua.pkl",
     )
     args = parser.parse_args()
     try:

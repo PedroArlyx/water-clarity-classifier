@@ -13,12 +13,12 @@ import pandas as pd
 
 from water_clarity.errors import ModelUnavailableError
 from water_clarity.ml.features import (
+    CENTER_FRACTION,
     CHANNELS,
     FEATURE_SCHEMA_VERSION,
-    HISTOGRAM_FEATURES,
+    center_color_features,
     extract_features_from_image,
     read_limited,
-    to_feature_vector,
     validate_image_bytes,
 )
 from water_clarity.settings import MODEL_METADATA_PATH, WATER_MODEL_PATH
@@ -101,8 +101,14 @@ class ModelService:
                             "O modelo não pôde ser carregado. Treine-o novamente no ambiente atual."
                         ) from exc
                     required = {"modelo", "colunas"}
-                    if not isinstance(loaded, dict) or not required.issubset(loaded):
-                        raise ModelUnavailableError("O artefato do modelo possui formato incompatível.")
+                    if (
+                        not isinstance(loaded, dict)
+                        or not required.issubset(loaded)
+                        or loaded.get("extrator") != "cor_do_centro"
+                    ):
+                        raise ModelUnavailableError(
+                            "O artefato do modelo possui formato incompatível. Execute 'python train_model.py'."
+                        )
                     self._bundle = loaded
         return self._bundle
 
@@ -131,7 +137,8 @@ class ModelService:
         features, mean_rgb = extract_features_from_image(image)
         bundle = self.bundle()
         columns = list(bundle["colunas"])
-        vector = pd.DataFrame([to_feature_vector(features, columns)], columns=columns, dtype=float)
+        fraction = float(bundle.get("fracao_centro", CENTER_FRACTION))
+        vector = pd.DataFrame([center_color_features(image, fraction)], columns=columns, dtype=float)
         pipeline = bundle["modelo"]
         label = str(pipeline.predict(vector)[0])
 
@@ -158,8 +165,7 @@ class ModelService:
             histogram=_histogram_bins(features),
             feature_summary={
                 "count": len(columns),
-                "histogram_count": len(HISTOGRAM_FEATURES),
-                "engineered_count": len(columns) - len(HISTOGRAM_FEATURES),
+                "center_fraction": fraction,
                 "schema_version": FEATURE_SCHEMA_VERSION,
             },
             pipeline=_pipeline_steps(pipeline),

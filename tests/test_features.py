@@ -8,7 +8,6 @@ from PIL import Image
 
 from water_clarity.errors import InvalidImageError
 from water_clarity.ml.features import (
-    FEATURE_COLUMNS,
     HISTOGRAM_FEATURES,
     extract_features_from_image,
     validate_image_bytes,
@@ -18,8 +17,8 @@ from water_clarity.ml.features import (
 def test_histograms_are_normalized_and_schema_is_complete():
     image = Image.new("RGB", (10, 10), color=(10, 20, 30))
     features, means = extract_features_from_image(image)
-    assert len(FEATURE_COLUMNS) == 768
-    assert set(features) == set(FEATURE_COLUMNS)
+    assert len(HISTOGRAM_FEATURES) == 768
+    assert set(features) == set(HISTOGRAM_FEATURES)
     for channel in "rgb":
         assert sum(features[f"{channel}{index}"] for index in range(256)) == pytest.approx(1.0)
     assert means == pytest.approx((10.0, 20.0, 30.0))
@@ -53,3 +52,13 @@ def test_excessive_dimensions_are_rejected():
     with pytest.raises(InvalidImageError, match="dimensões"):
         validate_image_bytes(buffer.getvalue(), filename="wide.png", declared_mime="image/png")
 
+
+
+def test_center_color_features_ignore_the_border():
+    from water_clarity.ml.features import CENTER_COLOR_FEATURES, center_color_features
+
+    image = Image.new("RGB", (100, 100), color=(200, 30, 30))  # borda vermelha saturada
+    image.paste((240, 240, 240), (25, 25, 75, 75))  # centro neutro, como água limpa
+    features = center_color_features(image)
+    assert features.shape == (len(CENTER_COLOR_FEATURES),)
+    assert features[CENTER_COLOR_FEATURES.index("sat_mean")] == pytest.approx(0.0, abs=0.01)

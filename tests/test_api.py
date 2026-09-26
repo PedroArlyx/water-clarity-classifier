@@ -80,9 +80,9 @@ def test_request_body_limit_returns_413():
 
 def test_metadata_matches_saved_artifact(client):
     metadata = client.get("/api/v1/model/metadata").get_json()["data"]
-    assert metadata["dataset"]["samples"] == 65
-    assert metadata["feature_schema"]["count"] == 768
-    assert metadata["model_name"] == "Naive Bayes"
+    assert metadata["dataset"]["samples"] == 51
+    assert metadata["feature_schema"]["count"] == 19
+    assert metadata["model_name"] == "Regressão logística"
     assert metadata["model_details"]["file"] == "modelo_agua.pkl"
     assert metadata["primary_metric"] == "f1_macro"
 
@@ -95,9 +95,8 @@ def test_prediction_exposes_real_pipeline_details(client):
             content_type="multipart/form-data",
         ).get_json()["data"]
     features = body["features"]
-    assert features["count"] == 768
-    assert features["histogram_count"] == 768
-    assert features["engineered_count"] == 0
+    assert features["count"] == 19
+    assert features["center_fraction"] == 0.5
     for channel in ("r", "g", "b"):
         assert len(features["histogram"][channel]) == 32
         assert abs(sum(features["histogram"][channel]) - 1) < 1e-3

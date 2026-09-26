@@ -1,4 +1,8 @@
-"""Validação de imagens e extração do histograma RGB (768 bins) usado pelo modelo_agua."""
+"""Validação de imagens e extração de características de cor.
+
+O modelo_agua usa a cor do centro da foto (``center_color_features``); o histograma RGB
+da foto inteira continua sendo calculado só para a visualização na interface.
+"""
 
 from __future__ import annotations
 
@@ -23,8 +27,8 @@ from water_clarity.settings import (
 
 CHANNELS = ("r", "g", "b")
 HISTOGRAM_FEATURES = tuple(f"{channel}{index}" for channel in CHANNELS for index in range(256))
-FEATURE_SCHEMA_VERSION = "rgb-histogram-v1"
-FEATURE_COLUMNS = HISTOGRAM_FEATURES
+FEATURE_SCHEMA_VERSION = "cor-do-centro-v1"
+CENTER_FRACTION = 0.5
 EXTENSION_FORMATS = {
     "png": "PNG",
     "jpg": "JPEG",
@@ -157,3 +161,41 @@ def to_feature_vector(features: Mapping[str, float], columns: list[str] | tuple[
         raise ValueError(f"Schema incompatível; atributos ausentes: {missing[:5]}")
     return [float(features[column]) for column in columns]
 
+
+
+CENTER_COLOR_FEATURES = (
+    "sat_p10", "sat_p25", "sat_p50", "sat_p75", "sat_p90", "sat_mean", "sat_std",
+    "val_p10", "val_p50", "val_p90", "val_std",
+    "chroma_r", "chroma_g", "chroma_b", "chroma_r_std", "chroma_g_std", "chroma_b_std",
+    "sat_above_025", "sat_above_040",
+)
+
+
+def center_color_features(image: Image.Image, fraction: float = CENTER_FRACTION) -> np.ndarray:
+    """Estatísticas de cor do centro da foto, onde normalmente está o copo.
+
+    Diferente do histograma da foto inteira, ignora a maior parte do fundo. É o vetor de
+    entrada do modelo_agua, no treino e na inferência.
+    """
+    rgb_image = image.convert("RGB")
+    width, height = rgb_image.size
+    crop_w, crop_h = int(width * fraction), int(height * fraction)
+    left, top = (width - crop_w) // 2, (height - crop_h) // 2
+    center = rgb_image.crop((left, top, left + crop_w, top + crop_h)).resize((256, 256))
+    rgb = np.asarray(center, dtype=float) / 255
+    hsv = np.asarray(center.convert("HSV"), dtype=float) / 255
+    saturation, value = hsv[..., 1].ravel(), hsv[..., 2].ravel()
+    chroma = (rgb / (rgb.sum(axis=-1, keepdims=True) + 1e-6)).reshape(-1, 3)
+    return np.array(
+        [
+            *np.percentile(saturation, [10, 25, 50, 75, 90]),
+            saturation.mean(),
+            saturation.std(),
+            *np.percentile(value, [10, 50, 90]),
+            value.std(),
+            *chroma.mean(axis=0),
+            *chroma.std(axis=0),
+            (saturation > 0.25).mean(),
+            (saturation > 0.40).mean(),
+        ]
+    )

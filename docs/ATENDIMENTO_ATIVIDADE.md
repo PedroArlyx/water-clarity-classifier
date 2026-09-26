@@ -2,14 +2,14 @@
 
 | Requisito | Evidência no projeto | Resultado atual |
 |---|---|---|
-| Submeter o dataset a vários classificadores | — | não atendido: o projeto usa somente o `modelo_agua` (Naive Bayes) |
+| Submeter o dataset a vários classificadores | — | não atendido: o projeto usa somente o `modelo_agua` (Regressão Logística sobre a cor do centro) |
 | Usar medidas adequadas | `train_model.py:_scoring` e `resultados_avaliacao.csv` | accuracy, balanced accuracy, precision/recall macro, F1 macro e ponderado com desvios |
-| Identificar o melhor | — | não atendido: não há comparação entre algoritmos; F1 macro do `modelo_agua` 0,6991 |
-| Treinar o modelo com todos os dados | `train_final_model`, chamado somente após a avaliação | `model/modelo_agua.pkl`, 65 amostras |
+| Identificar o melhor | — | não atendido: não há comparação entre algoritmos; F1 macro do `modelo_agua` 0,582 (12/15 em fotos próprias nunca vistas) |
+| Treinar o modelo com todos os dados | `train_final_model`, chamado somente após a avaliação | `model/modelo_agua.pkl`, 51 imagens |
 | Representar KDD | pipeline, dashboard e `docs/ARQUITETURA.md` | sete etapas documentadas |
 | Receber foto na web Python | `templates/index.html`, `water_clarity/web.py` e Flask | upload clássico com e sem JavaScript |
-| Extrair RGB | `water_clarity/ml/features.py` | 768 bins de histograma |
-| Manter treino e inferência compatíveis | colunas no bundle e função compartilhada | versão `rgb-histogram-v1`, 768 atributos |
+| Extrair RGB | `water_clarity/ml/features.py` | 19 estatísticas de cor do centro da foto |
+| Manter treino e inferência compatíveis | `center_color_features` usada no treino e na API | versão `cor-do-centro-v1`, 19 atributos |
 | Classificar limpo/sujo | `ModelService.predict_upload` | classe, confiança, RGB, modelo e aviso |
 | Não afirmar potabilidade | constante `VISUAL_ONLY_WARNING` e todas as telas | aviso em respostas e interface |
 | Agente | `static/js/demo3d.js` | percepção, ação, decisão e resposta representadas |

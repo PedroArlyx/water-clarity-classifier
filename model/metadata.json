@@ -1,88 +1,120 @@
 {
   "artifact_format": "modelo_agua",
   "cross_validation": {
+    "groups": "group_id do catálogo (sessão de fotos ou página do Commons)",
     "n_splits": 5,
     "selection_metric": "f1_macro",
     "shuffle": true,
-    "strategy": "StratifiedKFold"
+    "strategy": "StratifiedGroupKFold"
   },
   "dataset": {
     "class_distribution": {
-      "limpo": 19,
-      "sujo": 46
+      "limpo": 36,
+      "sujo": 15
     },
-    "path": "res.csv",
-    "samples": 65,
-    "sha256": "d6718051fe36f2be1368e749f6c7405a95b522fd71c0ae2972ad2007a9aae42d"
+    "commons_photos": 36,
+    "own_photos": 15,
+    "path": "data/metadata/images.csv",
+    "samples": 51,
+    "sha256": "605cefe885e18564004c8fbad007dcd01d528ef0cef52fdb66c49d7a7b78b2e5"
   },
   "evaluation": {
     "classification_report": {
-      "accuracy": 0.7538461538461538,
+      "accuracy": 0.6862745098039216,
       "limpo": {
-        "f1-score": 0.6,
-        "precision": 0.5714285714285714,
-        "recall": 0.631578947368421,
-        "support": 19.0
+        "f1-score": 0.7777777777777778,
+        "precision": 0.7777777777777778,
+        "recall": 0.7777777777777778,
+        "support": 36.0
       },
       "macro avg": {
-        "f1-score": 0.711111111111111,
-        "precision": 0.7061688311688312,
-        "recall": 0.7179633867276888,
-        "support": 65.0
+        "f1-score": 0.6222222222222222,
+        "precision": 0.6222222222222222,
+        "recall": 0.6222222222222222,
+        "support": 51.0
       },
       "sujo": {
-        "f1-score": 0.8222222222222222,
-        "precision": 0.8409090909090909,
-        "recall": 0.8043478260869565,
-        "support": 46.0
+        "f1-score": 0.4666666666666667,
+        "precision": 0.4666666666666667,
+        "recall": 0.4666666666666667,
+        "support": 15.0
       },
       "weighted avg": {
-        "f1-score": 0.7572649572649572,
-        "precision": 0.762137862137862,
-        "recall": 0.7538461538461538,
-        "support": 65.0
+        "f1-score": 0.6862745098039216,
+        "precision": 0.6862745098039216,
+        "recall": 0.6862745098039216,
+        "support": 51.0
       }
     },
     "confusion_matrix": [
       [
-        12,
-        7
+        28,
+        8
       ],
       [
-        9,
-        37
+        8,
+        7
       ]
     ],
     "labels": [
       "limpo",
       "sujo"
     ],
+    "unseen_own_photos": {
+      "limpo": {
+        "hits": 5,
+        "total": 5
+      },
+      "sujo": {
+        "hits": 7,
+        "total": 10
+      }
+    },
     "winner_metrics": {
-      "accuracy": 0.7538461538461538,
-      "balanced_accuracy": 0.7188888888888889,
-      "f1_macro": 0.6990806561859193,
-      "f1_weighted": 0.7504271167429063,
-      "precision_macro": 0.7104256854256853,
-      "recall_macro": 0.7188888888888889
+      "accuracy": 0.691996891996892,
+      "balanced_accuracy": 0.6069444444444445,
+      "f1_macro": 0.58243894993895,
+      "f1_weighted": 0.673024198024198,
+      "precision_macro": 0.5834126984126985,
+      "recall_macro": 0.6069444444444445
     }
   },
   "feature_schema": {
-    "baseline_rgb_histogram_count": 768,
-    "count": 768,
-    "version": "rgb-histogram-v1"
+    "count": 19,
+    "features": [
+      "sat_p10",
+      "sat_p25",
+      "sat_p50",
+      "sat_p75",
+      "sat_p90",
+      "sat_mean",
+      "sat_std",
+      "val_p10",
+      "val_p50",
+      "val_p90",
+      "val_std",
+      "chroma_r",
+      "chroma_g",
+      "chroma_b",
+      "chroma_r_std",
+      "chroma_g_std",
+      "chroma_b_std",
+      "sat_above_025",
+      "sat_above_040"
+    ],
+    "version": "cor-do-centro-v1"
   },
   "model_details": {
-    "feature_selection": "Qui-quadrado",
+    "feature_selection": "recorte central de 50% da largura e da altura",
     "file": "modelo_agua.pkl",
-    "form": "B: seleção de atributos",
-    "k": 500,
+    "form": "Cor do centro da foto",
+    "k": 19,
     "pipeline": [
-      "normalizar",
-      "selecionar",
+      "padronizar",
       "modelo"
     ]
   },
-  "model_name": "Naive Bayes",
+  "model_name": "Regressão logística",
   "primary_metric": "f1_macro",
   "random_seed": 42,
   "runtime": {
@@ -98,6 +130,6 @@
     "platform": "Windows-11-10.0.26200-SP0",
     "python": "3.13.7"
   },
-  "trained_at": "2026-09-26T13:37:36.091265+00:00",
+  "trained_at": "2026-09-26T13:58:09.895968+00:00",
   "visual_only_warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
 }

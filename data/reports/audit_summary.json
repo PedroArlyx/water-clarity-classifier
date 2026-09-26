@@ -1,9 +1,9 @@
 {
   "cataloged": 55,
-  "approved": 15,
+  "approved": 51,
   "rejected": 4,
   "pending": 0,
-  "reserva": 36,
+  "reserva": 0,
   "holdout": 0,
   "exact_duplicate_hashes": 0,
   "near_duplicate_pairs_threshold_8": 0,

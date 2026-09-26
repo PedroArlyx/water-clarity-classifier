@@ -1,33 +1,37 @@
 # Water Clarity Classifier
 
-Classificador educacional que estima se a água de um copo parece **limpa** ou **suja** a partir de uma fotografia. O repositório reúne aquisição e auditoria de dados, histograma RGB, treino reproduzível do `modelo_agua`, API Flask, interface clássica e uma demonstração 3D cujo robô envia uma captura real da cena ao mesmo classificador.
+Classificador educacional que estima se a água de um copo parece **limpa** ou **suja** a partir de uma fotografia. O repositório reúne aquisição e auditoria de dados, cor do centro da foto, treino reproduzível do `modelo_agua`, API Flask, interface clássica e uma demonstração 3D cujo robô envia uma captura real da cena ao mesmo classificador.
 
 > **Aviso:** o sistema avalia somente aparência visual. Ele não comprova potabilidade nem segurança química ou microbiológica e não deve orientar consumo.
 
 ## Resultado atual
 
-O único modelo usado é `model/modelo_agua.pkl`: `Normalizer(l1)` → `SelectKBest(chi2, k=500)` → `GaussianNB`, treinado com scikit-learn 1.8.0 sobre 65 fotos (19 `limpo`, 46 `sujo`): as 50 originais do notebook do Colab mais as 15 fotos de celular em `data/raw/proprias/`. Métricas da validação cruzada estratificada de cinco folds:
+O único modelo usado é `model/modelo_agua.pkl`. Ele olha a **cor do centro da foto**, onde normalmente está o copo: recorta 50% da largura e da altura, extrai 19 estatísticas de saturação, brilho e cromaticidade e classifica com `StandardScaler` → `LogisticRegression` (classes balanceadas). Foi treinado com scikit-learn 1.8.0 sobre 51 imagens aprovadas no catálogo (36 `limpo`, 15 `sujo`): 15 fotos de celular do projeto (`data/raw/proprias/`) e 36 do Wikimedia Commons (`data/raw/commons/`).
 
-| Métrica do Naive Bayes | Média |
+A abordagem anterior (histograma RGB da foto inteira + Naive Bayes) era dominada pelo fundo: em fotos próprias nunca vistas acertava **8/15, só 1 de 5 limpas**. A atual acerta **12/15, com 5 de 5 limpas**; ainda erra as sujas claras e leitosas (`sujo2`, `sujo9`, `sujo12`).
+
+| Métrica (CV estratificada agrupada por sessão/fonte, 5 folds) | Média |
 |---|---:|
-| F1 macro | 0,6991 |
-| Acurácia balanceada | 0,7189 |
-| Acurácia | 0,7538 |
-| F1 ponderado | 0,7504 |
+| F1 macro | 0,582 |
+| Acurácia balanceada | 0,607 |
+| Acurácia | 0,692 |
+| Fotos próprias nunca vistas (uma sessão de fora por vez) | 12/15 (limpo 5/5, sujo 7/10) |
 
-A matriz de confusão fora do treino foi `[[12, 7], [9, 37]]`, na ordem `limpo`, `sujo`; desvio do F1 macro entre folds: 0,0998. O conjunto é mais variado que as 50 originais, por isso o F1 não é comparável ao 0,81 anterior. Ainda há poucas fotos limpas (19 × 46): o modelo tende a responder `sujo`. 36 fotos do Wikimedia Commons (`data/raw/commons/`) ficam como `reserva`, fora do treino, porque são quase todas de água limpa e ensinavam "foto da internet = limpo".
+A matriz de confusão fora do treino foi `[[28, 8], [8, 7]]`, na ordem `limpo`, `sujo`; desvio do F1 macro entre folds: 0,135. O F1 geral é puxado para baixo pelas fotos da internet, muito variadas e com poucas sujas; o número que mais se aproxima do uso real é o das fotos próprias nunca vistas, detalhado em `data/reports/fotos_nunca_vistas.csv`. Com tão poucas fotos, os números são preliminares.
+
+As 50 linhas de `res.csv.bak` (dados do notebook do Colab) existem só como histogramas, sem as fotos; por isso não servem para recortar o centro e não entram no treino atual.
 
 ## O que o projeto faz
 
 - valida extensão, MIME, assinatura, formato, dimensões e limite de pixels do upload;
-- corrige orientação EXIF, converte a imagem para RGB e extrai 768 bins de histograma normalizados;
-- classifica com o `modelo_agua` (normalização L1, seleção de 500 atributos por qui-quadrado e Gaussian Naive Bayes);
-- avalia com `StratifiedKFold(5, shuffle=True, random_state=42)`, métrica principal F1 macro;
+- corrige orientação EXIF, converte para RGB e recorta o centro da foto;
+- extrai 19 estatísticas de cor do centro e classifica com o `modelo_agua` (Regressão Logística);
+- avalia com `StratifiedGroupKFold(5)` por sessão/fonte e testa cada sessão de fotos próprias como nunca vista;
 - gera CSV de métricas, gráficos, matriz de confusão e metadados do experimento;
-- treina o `modelo_agua` com 100% dos dados depois da avaliação;
+- treina o `modelo_agua` com 100% das imagens depois da avaliação;
 - atende upload tradicional e uma cozinha 3D interativa pelo mesmo endpoint de inferência;
 - expõe dashboard experimental e API JSON versionada;
-- cataloga procedência, licença, revisão e hash das imagens externas;
+- cataloga procedência, licença, revisão e hash das imagens;
 - inclui testes, lint, CI e Blueprint de deploy para Render.
 
 ## Início rápido
@@ -50,34 +54,22 @@ Acesse `http://127.0.0.1:5000`. As páginas disponíveis são:
 
 ## Pipeline de dados e treinamento
 
-O `res.csv.bak` preserva as 50 linhas legadas. As imagens aprovadas no catálogo `data/metadata/images.csv` são transformadas e combinadas a essa base para produzir `res.csv`.
+O treino lê direto as imagens com `review_status=approved` em `data/metadata/images.csv` (fotos próprias em `data/raw/proprias/<classe>/`, Commons em `data/raw/commons/<classe>/`).
 
 ```bash
-# Reexecuta auditoria, preparação e treinamento completo
-python -m scripts.pipeline
-
-# Etapas independentes
-python -m scripts.audit_dataset
-python -m scripts.prepare_dataset
-python train_model.py --evaluate-only   # só validação cruzada, não grava nada
-python -m scripts.train_final           # avalia e retreina model/modelo_agua.pkl
+python train_model.py                   # avalia e treina model/modelo_agua.pkl
+python train_model.py --evaluate-only   # só avaliação, não grava nada
+python -m scripts.audit_dataset         # duplicatas e dimensões das imagens aprovadas
 ```
 
-Para importar novamente os candidatos selecionados do Wikimedia Commons é necessário acesso à internet:
+Para adicionar fotos próprias (vão para `data/raw/proprias/<classe>/` com o nome original):
 
 ```bash
-python -m scripts.import_wikimedia
-python -m scripts.review_candidates
+python add_to_dataset.py foto1.jpg limpo foto2.jpg sujo   --license "Fotos próprias" --author "Nome" --group sessao-3 --reviewed
+python train_model.py
 ```
 
-Para catalogar uma nova imagem local, informe licença e autoria. Sem `--reviewed`, ela permanece pendente e não entra no dataset preparado.
-
-```bash
-python add_to_dataset.py foto.jpg limpo \
-  --license "CC BY-SA 4.0" --author "Nome" --source-url "https://..."
-python -m scripts.review_candidates
-python -m scripts.prepare_dataset
-```
+Use um `--group` por sessão de fotos: a avaliação nunca mistura fotos da mesma sessão no treino e no teste. Sem `--reviewed`, a foto fica pendente e não entra no treino. Para importar novamente os candidatos do Wikimedia Commons: `python -m scripts.import_wikimedia` e `python -m scripts.review_candidates`.
 
 ## API
 
@@ -93,7 +85,7 @@ Resposta resumida:
   "data": {
     "classification": "limpo",
     "confidence": 0.9012,
-    "model": "Naive Bayes",
+    "model": "Regressão logística",
     "warning": "Resultado baseado somente na aparência visual; não confirma potabilidade, segurança química ou microbiológica."
   }
 }
@@ -147,7 +139,7 @@ docs/                   arquitetura, API, dados, segurança e relatório
 - A base é pequena, desbalanceada e não representa condições variadas de iluminação, recipiente, câmera e tipos de contaminação.
 - Fotografias semelhantes podem induzir vazamento entre folds; o catálogo novo possui `group_id`, mas a base legada não.
 - Transparência ou cor não revela contaminantes invisíveis. O domínio do sistema é classificação visual binária, não potabilidade.
-- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `data/raw/proprias/sujo/sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado. O Gaussian Naive Bayes sobre 500 bins produz probabilidades extremas (0 ou 1) e classifica como `sujo` fotos que se afastam das 50 do treino — inclusive `limpo2.jpg` e as fotos limpas de `data/raw`.
+- Os modos renderizados alteram a cena, mas não forçam o resultado. Com o modelo atual, a cena marrom ainda pode ser classificada como `limpo`; use o modo de upload com `data/raw/proprias/sujo/sujo19.jpg` para demonstrar o alerta real. Essa falha é evidência da limitação do modelo, não deve ser escondida nem substituída por um rótulo simulado. O modelo ainda confunde água suja clara ou leitosa com limpa; mais fotos desse tipo são o próximo passo.
 
 ## Licenças e terceiros
 

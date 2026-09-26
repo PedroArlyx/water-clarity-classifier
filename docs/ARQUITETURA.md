@@ -7,7 +7,7 @@ flowchart LR
     U[Usuário] --> UI[Upload clássico ou cozinha 3D]
     UI --> API[Flask /api/v1/predictions]
     API --> V[Validação segura da imagem]
-    V --> F[Histograma RGB 768 bins]
+    V --> F[Cor do centro da foto: 19 atributos]
     F --> M[modelo_agua.pkl carregado uma vez]
     M --> R[Classe, confiança e aviso]
     META[metadata.json] --> DASH[Dashboard experimental]
@@ -20,13 +20,11 @@ A factory `water_clarity.create_app` registra dois blueprints: `web`, responsáv
 
 ```mermaid
 flowchart TD
-    A[50 linhas legadas em res.csv.bak] --> D[Preparação]
-    B[Imagens catalogadas] --> C{Revisão aprovada?}
-    C -- sim --> D
+    B[Imagens catalogadas em data/metadata/images.csv] --> C{Revisão aprovada?}
+    C -- sim --> D[Conferência de hash]
     C -- não --> X[Excluída ou pendente]
-    D --> E[res.csv + hash]
-    E --> F[Limpeza e validação]
-    F --> G[768 histogramas normalizados]
+    D --> F[Recorte de 50% do centro]
+    F --> G[19 estatísticas de saturação, brilho e cromaticidade]
     G --> J[Mineração e interpretação]
 ```
 
@@ -34,8 +32,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    X[Dataset preparado] --> CV[StratifiedKFold 5x, seed 42]
-    CV --> P[Normalizer L1 → SelectKBest chi2 k=500 → GaussianNB]
+    X[Imagens aprovadas] --> CV[StratifiedGroupKFold 5x por sessão/fonte, seed 42]
+    CV --> P[StandardScaler → LogisticRegression balanceada]
+    X --> LOSO[Cada sessão de fotos próprias fora uma vez]
     P --> OOF[Predições out-of-fold e matriz]
     P --> FINAL[Modelo treinado em 100%]
     FINAL --> ART[modelo_agua.pkl]
@@ -56,7 +55,7 @@ sequenceDiagram
     A->>V: bytes, nome, MIME
     V-->>A: RGB sanitizado
     A->>F: imagem RGB
-    F-->>A: vetor com 768 bins RGB
+    F-->>A: 19 atributos do centro (+ histograma só para a interface)
     A->>M: predict + predict_proba
     M-->>A: classe e confiança
     A-->>C: JSON + aviso visual
@@ -98,7 +97,7 @@ Módulos em `static/js/experience/` (ES modules nativos, carregados só após "I
 
 **Separação entre aparência e decisão.** O seletor "Água da torneira" altera apenas o material renderizado. A câmera fixa da estação de visão (fundo com backlight, como em inspeção de líquidos) renderiza sempre 512×512 com pixel ratio 1 — independentemente da qualidade gráfica — e o PNG segue para o mesmo endpoint do upload. Nenhum rótulo é enviado. O modo "Minha foto" envia a fotografia do usuário no lugar da captura.
 
-**Limitação observada do modelo atual.** O Gaussian Naive Bayes sobre 500 bins produz probabilidades extremas (0 ou 1) e tende a devolver "sujo" para imagens que se afastam das fotos do treino, inclusive fotos limpas fora do cenário do treino. A demonstração mostra esse resultado honestamente; para o cenário de alerta use o modo "Minha foto" com uma imagem que o modelo reconhece como suja (ex.: `sujo19.jpg`).
+**Limitação observada do modelo atual.** O modelo olha a cor do centro da foto; ele ainda confunde água suja clara ou leitosa com limpa e depende de o copo estar no centro do enquadramento. A demonstração mostra o resultado real; para o cenário de alerta use o modo "Minha foto" com uma imagem claramente suja (ex.: `data/raw/proprias/sujo/sujo19.jpg`).
 
 ## Organização
 
@@ -111,7 +110,7 @@ flowchart TB
     SERVICE --> FEATURES[ml/features.py]
     TRAIN[train_model.py] --> FEATURES
     TRAIN --> MODEL[model/*]
-    SCRIPTS[scripts/*] --> DATA[data/* e res.csv]
+    SCRIPTS[scripts/*] --> DATA[data/*]
     DATA --> TRAIN
 ```
 

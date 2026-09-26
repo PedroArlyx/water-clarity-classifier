@@ -8,7 +8,7 @@ data/
 │   ├── proprias/        # Fotos de celular do projeto (entram no treino)
 │   │   ├── limpo/
 │   │   └── sujo/
-│   └── commons/         # Wikimedia Commons (hoje em reserva, fora do treino)
+│   └── commons/         # Wikimedia Commons (entram no treino)
 │       ├── limpo/
 │       └── sujo/
 ├── metadata/
@@ -20,17 +20,13 @@ data/
 
 ## Política de inclusão
 
-Uma imagem só entra no `res.csv` quando possui `review_status=approved`. O nome
-ou a consulta de busca não é usado como verdade do rótulo. O fluxo verifica o
-hash antes de extrair o histograma RGB.
+Uma imagem só entra no treino (`python train_model.py`) quando possui
+`review_status=approved`. O nome ou a consulta de busca não é usado como verdade
+do rótulo. O treino confere o hash antes de extrair a cor do centro da foto.
 
 Outros status do catálogo:
 
-- `reserva` — imagem revisada e válida, mas fora do treino. As fotos do Wikimedia
-  Commons são quase todas de água limpa (31 limpo × 5 sujo); treinar com elas faz o
-  modelo aprender "foto da internet = limpo" e derrubou a acurácia balanceada nas
-  50 fotos originais de ~0,80 para 0,43 (CV agrupada por fonte, 26/09/2026).
-  Voltam para `approved` quando houver fotos sujas equivalentes.
+- `reserva` — imagem revisada e válida, mas deixada fora do treino (hoje nenhuma).
 - `holdout` — teste externo, nunca treinado (hoje nenhuma imagem).
 - `rejected` / `pending` — descartadas ou aguardando revisão.
 
@@ -38,10 +34,10 @@ Outros status do catálogo:
 python -m scripts.import_wikimedia   # aquisição pendente
 python -m scripts.review_candidates # decisões humanas registradas
 python -m scripts.audit_dataset     # duplicatas e dimensões
-python -m scripts.prepare_dataset   # reconstrói res.csv
-python train_model.py               # avalia e treina o vencedor
+python train_model.py               # avalia e treina o modelo_agua
 ```
 
-`res.csv.bak` preserva as 50 linhas legadas. Como os respectivos arquivos
-originais e IDs de sessão não estão disponíveis, não é possível auditar
-near-duplicates ou executar validação agrupada sobre essa parte da base.
+`res.csv.bak` preserva as 50 linhas do notebook do Colab. Elas existem só como
+histogramas, sem as fotos, então não servem para recortar o centro e não entram
+no treino atual. `scripts/prepare_dataset.py` e `res.csv` ficam apenas como
+registro da abordagem anterior.
